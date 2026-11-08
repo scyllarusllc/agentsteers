@@ -1,4 +1,4 @@
-# AgentSteers local development helpers. Never deploys or runs Codex.
+# AgentSteers development and explicit website deployment helpers. Never runs Codex.
 SHELL := /bin/sh
 PYTHON ?= python3.11
 VENV := .venv
@@ -7,7 +7,7 @@ VENV_PYTHON := $(VENV)/bin/python
 .PHONY: help setup install frappe-install frappe-dev-auto dev publish test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Back up and deploy website to dedicated production Frappe Bench' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py

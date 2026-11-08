@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import os
 import json
-import datetime
 import re
 from pathlib import Path
 import shutil
@@ -19,7 +18,6 @@ import urllib.error
 
 from yarn_environment import ensure_yarn
 from mariadb_environment import ensure_mariadb
-from frappe_database_auth import repair_missing_site_account, _root_sql, _literal, diagnose_mariadb_root_socket
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "frappe_app"
@@ -54,53 +52,6 @@ def diagnose_site_database_config(bench: Path, site: str) -> None:
               file=sys.stderr, flush=True)
 
 
-def diagnose_mariadb_root_access() -> None:
-    """Read-only MariaDB administrator diagnostic after authentication failure."""
-    if not shutil.which("sudo") or not shutil.which("mariadb"):
-        print("Skipping MariaDB root diagnostic: sudo or mariadb client unavailable.",
-              file=sys.stderr, flush=True)
-        return
-    print("Checking local MariaDB administrator access without prompting for a password...",
-          file=sys.stderr, flush=True)
-    result = subprocess.run(
-        ["sudo", "-n", "mariadb", "-e", "SELECT CURRENT_USER(), VERSION();"],
-        text=True, capture_output=True, check=False,
-    )
-    if result.returncode == 0:
-        print("MariaDB administrator connection succeeded; Frappe credentials still "
-              "require separate verification.", file=sys.stderr, flush=True)
-    else:
-        print('MariaDB admin diagnostic unavailable or failed. Manually run: '
-              'sudo mariadb -e "SELECT CURRENT_USER(), VERSION();" ',
-              file=sys.stderr, flush=True)
-
-
-def diagnose_database_accounts() -> None:
-    """Optional read-only MariaDB account list after Frappe error 1045."""
-    if not sys.stdin.isatty() or not shutil.which("su"):
-        print("Account check requires an interactive root session (su).",
-              file=sys.stderr, flush=True)
-        return
-    print("MariaDB account inspection is available. It will run 'SELECT User, Host "
-          "FROM mysql.user' under root, without changing database users.",
-          file=sys.stderr, flush=True)
-    answer = input("Type CHECK DB USERS to inspect database accounts, or press Enter to skip: ").strip()
-    if answer != "CHECK DB USERS":
-        print("Skipped MariaDB account inspection.", file=sys.stderr, flush=True)
-        return
-    # su asks for the root password through the terminal. Never read or store it.
-    # Fixed command: no shell input from the site configuration or error message.
-    query = "mariadb --batch -e 'SELECT User, Host FROM mysql.user;'"
-    result = subprocess.run(["su", "-c", query], check=False)
-    if result.returncode:
-        print("Could not inspect MariaDB accounts. Root password login may be "
-              "disabled or the MariaDB administrator account may require different "
-              "authentication.", file=sys.stderr, flush=True)
-    else:
-        print("MariaDB account list completed. This does not verify the Frappe "
-              "password or grants.", file=sys.stderr, flush=True)
-
-
 def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
     print("+ " + " ".join(args), flush=True)
     if capture:
@@ -108,21 +59,22 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
         if result.returncode:
             # Show the real Frappe traceback without hiding it behind exit status 1.
             details = (result.stderr or result.stdout or "").strip()
-            if re.search(r"Access denied for user .*using password:", details, re.I):
-                print("MariaDB rejected the Frappe site's database credentials (error 1045).", file=sys.stderr, flush=True)
-                diagnose_mariadb_root_access()
+            if re.search(r"Access denied for user", details, re.I):
+                print("MariaDB authentication failed (1045/1698).", file=sys.stderr, flush=True)
                 print("Frappe reads the database username from its site configuration; "
                       "you do NOT need to type or share it.", file=sys.stderr, flush=True)
                 print("This can mean a missing database account, mismatched password, "
                       "or incorrect user@host grants. The existing site configuration "
                       "and credentials have NOT been changed.", file=sys.stderr, flush=True)
                 print("A database administrator must reconcile the account and site configuration "
-                      "before publishing; do not reset the MariaDB root password or delete the site.",
+                      "before publishing; do not reset the MariaDB root password or delete the site. "
+                      "For error 1698, verify whether the administrator account requires Unix socket "
+                      "authentication as Linux root. Publish will not initialize or rebuild a site.",
                       file=sys.stderr, flush=True)
             elif details:
                 print(details, file=sys.stderr, flush=True)
-            marker = " [MariaDB authentication 1045]" if re.search(
-                r"Access denied for user .*using password:", details, re.I
+            marker = " [MariaDB authentication failed]" if re.search(
+                r"Access denied for user", details, re.I
             ) else ""
             raise RuntimeError(
                 f"Bench command failed (exit {result.returncode}): "
@@ -134,24 +86,70 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
     return ""
 
 
-def verify_git_release() -> str:
-    """Require a clean, exact upstream main checkout; never reset or pull."""
-    def output(*cmd: str) -> str:
-        return subprocess.run(cmd, cwd=ROOT, check=True, text=True,
-                              stdout=subprocess.PIPE, stderr=subprocess.PIPE).stdout.strip()
+def git_output(*args: str) -> str:
+    result = subprocess.run(["git", *args], cwd=ROOT, text=True, capture_output=True)
+    require(result.returncode == 0,
+            "Git command failed: git " + " ".join(args)
+            + ". Check repository ownership, origin access and Git credentials. "
+            "No automatic reset or stash was attempted.")
+    return result.stdout.strip()
 
-    require(output("git", "rev-parse", "--show-toplevel") == str(ROOT.resolve()),
+
+def confirm_git_action(prompt: str, expected: str) -> None:
+    require(sys.stdin.isatty(), prompt + " Run make publish in an interactive terminal.")
+    require(input(prompt + " Type " + expected + " to continue: ").strip() == expected,
+            "Git action cancelled; local work preserved.")
+
+
+def verify_git_release() -> str:
+    """Synchronize a reviewed main release only with explicit consent."""
+    require(git_output("rev-parse", "--show-toplevel") == str(ROOT.resolve()),
             "Run from the AgentSteers repository checkout.")
-    require(output("git", "symbolic-ref", "--quiet", "--short", "HEAD") == "main",
-            "Publish is allowed only from the main branch.")
-    require(not output("git", "status", "--porcelain", "--untracked-files=normal"),
-            "Working tree contains local changes. Commit or stash before publishing.")
-    print("Checking remote main without modifying the local working tree...", flush=True)
-    remote = output("git", "ls-remote", "--exit-code", "origin", "refs/heads/main").split()[0]
-    head = output("git", "rev-parse", "HEAD")
-    require(head == remote, "Local main differs from origin/main; run make pull and review before publish.")
-    print(f"Verified clean Git main at {head}", flush=True)
-    return head
+    require(git_output("symbolic-ref", "--quiet", "--short", "HEAD") == "main",
+            "Publish is allowed only from main; switch branches explicitly.")
+    status = git_output("status", "--porcelain", "--untracked-files=normal")
+    if status:
+        require("--check" not in sys.argv, "Working tree contains local changes; read-only check stopped.")
+        print("Local changes to review before publishing:\n" + status, flush=True)
+        print(git_output("diff", "--stat"), flush=True)
+        print("This will stage tracked changes and untracked non-ignored files. "
+              "Review their contents and exclude secrets before agreeing.", flush=True)
+        confirm_git_action("Commit and push these reviewed changes?", "COMMIT AND PUSH")
+        message = input("Commit message: ").strip()
+        require(bool(message), "Commit message required; no files staged.")
+        require(git_output("status", "--porcelain", "--untracked-files=normal") == status,
+                "File list changed during review; rerun make publish before staging.")
+        git_output("add", "--all")
+        git_output("commit", "-m", message)
+
+    # Fetch only updates Git metadata, never the checked-out files.
+    if "--check" in sys.argv:
+        remote = git_output("ls-remote", "--exit-code", "origin", "refs/heads/main").split()[0]
+        require(git_output("rev-parse", "HEAD") == remote, "Local main differs from origin/main.")
+        return remote
+    git_output("fetch", "origin", "main")
+    head = git_output("rev-parse", "HEAD")
+    remote = git_output("rev-parse", "FETCH_HEAD")
+    if head != remote:
+        behind, ahead = map(int, git_output(
+            "rev-list", "--left-right", "--count", "FETCH_HEAD...HEAD").split())
+        require(not (behind and ahead),
+                "Local main and origin/main have diverged. Resolve the merge/rebase "
+                "explicitly, then rerun make publish. Local commits preserved.")
+        if behind:
+            confirm_git_action(f"Local main is behind by {behind} commit(s). Fast-forward?", "UPDATE MAIN")
+            git_output("merge", "--ff-only", remote)
+            raise RuntimeError("Main updated safely. Review the incoming changes and rerun "
+                               "make publish so the updated deployment script is loaded.")
+        confirm_git_action(f"Push {ahead} local commit(s) to origin/main?", "PUSH MAIN")
+        git_output("push", "origin", "HEAD:refs/heads/main")
+    remote = git_output("ls-remote", "--exit-code", "origin", "refs/heads/main").split()[0]
+    require(git_output("rev-parse", "HEAD") == remote,
+            "Remote main changed during preparation; rerun make publish after review.")
+    require(not git_output("status", "--porcelain", "--untracked-files=normal"),
+            "Working tree changed during preparation; publication stopped.")
+    print(f"Verified clean Git main at {remote}", flush=True)
+    return remote
 
 
 def confirm_release(commit: str) -> None:
@@ -258,7 +256,7 @@ def ensure_apps_manifest(bench: Path, *, check_only: bool = False) -> None:
         names.append(APP)
     if not manifest.exists():
         require(not check_only,
-                "Missing sites/apps.txt; run make publish to repair it.")
+                "Missing sites/apps.txt; repair the Bench manifest before publishing.")
         manifest.write_text("\n".join(names) + "\n")
         print("Created missing Frappe sites/apps.txt.", flush=True)
         return
@@ -267,68 +265,12 @@ def ensure_apps_manifest(bench: Path, *, check_only: bool = False) -> None:
     missing = [name for name in names if name not in present]
     if missing:
         require(not check_only,
-                "Missing entries in sites/apps.txt; run make publish to repair them.")
+                "Missing entries in sites/apps.txt; repair the Bench manifest before publishing.")
         with manifest.open("a") as stream:
             if original and not original.endswith("\n"):
                 stream.write("\n")
             stream.write("\n".join(missing) + "\n")
         print("Added missing Frappe app entries: " + ", ".join(missing), flush=True)
-
-
-def offer_fresh_site_recovery(bench: Path, site: str, bench_cli: str) -> bool:
-    """Explicitly rebuild a verified missing-database site, preserving old files."""
-    if not sys.stdin.isatty() or bench != (ROOT / "frappe-bench").resolve():
-        return False
-    site_dir = bench / "sites" / site
-    config_path = site_dir / "site_config.json"
-    if site_dir.is_symlink() or config_path.is_symlink():
-        raise RuntimeError("Symlinked site configuration; recovery refused.")
-    config = json.loads(config_path.read_text(encoding="utf-8"))
-    db_name = config.get("db_name")
-    if not isinstance(db_name, str) or not re.fullmatch(r"[A-Za-z0-9_]+", db_name):
-        raise RuntimeError("Invalid configured database name; recovery refused.")
-    print("Checking whether the configured site database is actually missing. "
-          "Linux root authentication may be requested.", flush=True)
-    result = _root_sql(
-        "SELECT COUNT(*) FROM information_schema.SCHEMATA "
-        f"WHERE SCHEMA_NAME={_literal(db_name)};\n", read_only=True
-    ).strip()
-    if result not in ("0", "1"):
-        raise RuntimeError("Database existence query returned an unexpected result; recovery refused.")
-    if result == "1":
-        print("Recovery refused: configured database exists; no initialization attempted.",
-              flush=True)
-        return False
-    print("The configured database is absent. This may be an incomplete first-time "
-          "installation. Existing site files will be preserved in a separate directory.",
-          flush=True)
-    answer = input("Type REINITIALIZE EMPTY SITE to create a fresh Frappe site: ").strip()
-    if answer != "REINITIALIZE EMPTY SITE":
-        print("Fresh-site initialization skipped.", flush=True)
-        return False
-    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    archive = bench / "sites" / (".agentsteers-incomplete-" + stamp)
-    if archive.exists():
-        raise RuntimeError("Recovery archive already exists; refusing to overwrite.")
-    site_dir.rename(archive)
-    print(f"Preserved previous site directory at {archive}", flush=True)
-    try:
-        # Bench securely prompts for database administrator and Frappe
-        # Administrator passwords; never supply secrets on the command line.
-        run([bench_cli, "new-site", site], cwd=bench)
-    except BaseException:
-        if not site_dir.exists():
-            archive.rename(site_dir)
-            print("Restored original site directory after failed initialization.",
-                  file=sys.stderr, flush=True)
-        else:
-            print("Initialization failed and created partial files. Preserved both "
-                  "directories for manual inspection; no automatic deletion.",
-                  file=sys.stderr, flush=True)
-        raise
-    print("Fresh Frappe site initialized; previous site files remain archived.",
-          flush=True)
-    return True
 
 
 def main() -> int:
@@ -338,20 +280,7 @@ def main() -> int:
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
     commit = verify_git_release()
-    if "--check" not in sys.argv:
-        ensure_yarn()
-    try:
-        bench = resolve_bench(site)
-    except RuntimeError as exc:
-        # New, single-purpose AgentSteers installation: initialise the managed
-        # Bench on the first publish only. Never use auto-setup for ambiguous
-        # existing Benches, explicit paths, or the read-only preflight mode.
-        if ("Could not auto-detect an existing Frappe Bench" not in str(exc)
-                or "--check" in sys.argv):
-            raise
-        print("No existing Frappe Bench found. Running first-time make setup automatically...", flush=True)
-        run([sys.executable, str(ROOT / "scripts" / "setup_managed_bench.py")], cwd=ROOT)
-        bench = resolve_bench(site)
+    bench = resolve_bench(site)
     print(f"Production Bench candidate: {bench}", flush=True)
     require(bench != ROOT and (ROOT not in bench.parents or bench == ROOT / "frappe-bench"),
             "Only the project-managed frappe-bench/ subdirectory may serve as a Bench inside the repository.")
@@ -414,52 +343,11 @@ def main() -> int:
         bench_cli = shutil.which("bench")
     require(bool(bench_cli), "Bench CLI not found.")
 
-    ensure_apps_manifest(bench, check_only="--check" in sys.argv)
-
-    ensure_mariadb(bench, site, check_only="--check" in sys.argv)
-
+    # Preflight never installs packages, starts services, or repairs accounts/sites.
+    ensure_apps_manifest(bench, check_only=True)
+    ensure_mariadb(bench, site, check_only=True)
     diagnose_site_database_config(bench, site)
-
-    # Independent, read-only authentication diagnostic before site DB access.
-    # Do not change accounts, passwords, grants, or databases.
-    if sys.stdin.isatty() and "--check" not in sys.argv:
-        print("MariaDB root Unix socket preflight (read-only):", flush=True)
-        socket_ok = diagnose_mariadb_root_socket()
-        print("MariaDB root socket preflight: "
-              + ("SUCCESS" if socket_ok else "FAILED or unavailable"),
-              flush=True)
-
-    # Verify site and database are accessible BEFORE normal deployment changes.
-    # Only after error 1045, allow explicit creation of a *missing* local
-    # account. Never change a pre-existing account or password.
-    list_args = [bench_cli, "--site", site, "list-apps"]
-    try:
-        run(list_args, cwd=bench, capture=True)
-    except RuntimeError as exc:
-        if "--check" in sys.argv and "[MariaDB authentication 1045]" in str(exc):
-            if sys.stdin.isatty():
-                print("Optional read-only account inspection requires Linux root "
-                      "authentication via su. No database changes will be made.", flush=True)
-                answer = input("Type INSPECT DB ACCOUNT to proceed, or Enter to skip: ").strip()
-                if answer == "INSPECT DB ACCOUNT":
-                    try:
-                        repair_missing_site_account(bench, site, inspect_only=True)
-                    except RuntimeError as diagnostic_error:
-                        print(f"Read-only account inspection unavailable: {diagnostic_error}",
-                              file=sys.stderr, flush=True)
-            raise
-        if "--check" in sys.argv or "[MariaDB authentication 1045]" not in str(exc):
-            raise
-        try:
-            repaired = repair_missing_site_account(bench, site)
-        except RuntimeError as diagnostic_error:
-            if "site database does not exist" not in str(diagnostic_error):
-                raise
-            print("The configured Frappe database is missing.", flush=True)
-            repaired = offer_fresh_site_recovery(bench, site, bench_cli)
-        if not repaired:
-            raise
-        run(list_args, cwd=bench, capture=True)
+    run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
 
     if "--check" in sys.argv:
         print(f"Publish preflight passed for {DOMAIN} at {commit}. No backups, migrations, or restarts executed.", flush=True)
@@ -469,6 +357,7 @@ def main() -> int:
     print("Production target validated. Taking site backup before any changes...", flush=True)
     run([bench_cli, "--site", site, "backup", "--with-files"], cwd=bench)
 
+    ensure_yarn()
     if not link.exists():
         link.symlink_to(APP_SRC, target_is_directory=True)
     ensure_apps_manifest(bench)

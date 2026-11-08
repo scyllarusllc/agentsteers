@@ -30,3 +30,33 @@ The source repository and a passing CI build do **not** grant server access or p
 Current private plugin: https://chatgpt.com/plugins/plugins_6af01e64bc7c8191845e71ac1c947ca6
 
 Do not commit credentials, OAuth client secrets, IP-sensitive details, or token contents into the repository.
+
+## Publishing the Frappe website
+
+Run as the dedicated Bench owner from the reviewed checkout:
+
+```sh
+make publish
+```
+
+`make publish` runs every deployment step in order: check the clean upstream
+`main` release, dedicated single-site Bench, app manifest, database reachability
+and site database login; request release confirmation; take a full site backup;
+install dependencies/app; migrate; build assets; clear the website cache; restart
+the dedicated Bench; and verify HTTPS. No separate preflight command is needed.
+Preflight failure stops before deployment changes, and backup failure stops
+before installation or migration. When local changes exist, publishing lists them and offers to stage and commit
+them with an explicit confirmation and commit message. It separately confirms
+pushing local commits. Review all listed files first: untracked non-ignored files
+are included. A behind-only branch can be fast-forwarded with confirmation;
+review incoming changes and rerun so the updated script is loaded. Diverged
+branches stop for manual resolution. No force push, reset, or stash is used.
+
+First-time initialization belongs to `make setup`, not `make publish`. A missing
+site or database login failure stops publication without rebuilding the site or
+renaming its files. Resolve MariaDB 1045/1698 with the administrator: verify the
+configured site account and grants, and distinguish Unix socket administrator
+login from password login. Do not reset root authentication or delete existing
+sites to bypass these checks. Preserve partial-site archives for manual recovery.
+
+This publishes `agentsteers.com`; it does not publish MCP, edit Caddy, or run Codex.
