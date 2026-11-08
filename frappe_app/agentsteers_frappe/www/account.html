@@ -1,0 +1,27 @@
+{% set signed_in = frappe.session.user != "Guest" %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Account — AgentSteers</title>
+<link rel="stylesheet" href="/assets/agentsteers_frappe/css/styles.css?v=8c9d2838a8ae">
+</head>
+<body>
+<header class="site-header wrap"><a class="brand" href="/"><span class="brand-icon">A↗</span> AgentSteers</a><nav><a href="/">Home</a></nav></header>
+<main class="wrap account-page">
+{% if signed_in %}
+<p class="eyebrow">ACCOUNT</p>
+<h1>You're signed in.</h1>
+<p class="lead">Your AgentSteers website session is active.</p>
+<p class="account-identity">Signed in as <strong>{{ frappe.session.user | e }}</strong></p>
+<p><a class="button secondary" href="/?cmd=web_logout">Sign out</a></p>
+{% else %}
+<p class="eyebrow">ACCOUNT</p>
+<h1>Welcome to AgentSteers.</h1>
+<p class="lead">Sign in to access your account. Google sign-in will be available after the site administrator configures Frappe Social Login.</p>
+<p><a class="button primary" href="/login?redirect-to=%2Faccount">Continue to sign in →</a></p>
+{% endif %}
+<p class="footnote">Account access does not grant permission to run Codex or use the future MCP service.</p>
+</main>
+</body></html>
