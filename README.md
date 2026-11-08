@@ -145,24 +145,30 @@ make dev
 
 Keep the token private and do not commit it. Stop the foreground server with Ctrl+C. This development server uses a single bearer-token guard, **not** the production OAuth identity and authorization flow. The underlying tools remain mock-only: `make dev` does not start Codex CLI, access a remote server, run real code-generation tasks, deploy anything, or move funds.
 
-### Automatic Frappe app installation (dedicated development site only)
+### Automatic local Frappe Bench detection
 
-`make dev` automatically installs or updates the Frappe app **only after** you explicitly configure an existing, isolated development Bench/site. It will never create a site, guess a site name, or edit production reverse proxies.
+`make dev` now uses the **current project directory** by default: it checks the working directory, repository root, and `./frappe-bench` for a valid Frappe Bench layout (`apps/frappe`, `sites/`, and `env/bin/python`). You do **not** need to set `AGENTSTEERS_BENCH_DIR` when your Bench is already in one of those locations.
 
-On your CentOS development host, configure the **actual** Bench path and dedicated test site name (examples below are placeholders):
+The repository's `frappe_app/` code **is not itself a Bench**. If there is no existing Bench, `make dev` explicitly reports that Frappe installation was skipped and still starts the local mock MCP service. It does not silently install Frappe, create a database/site, or deploy a website.
+
+When a Bench is found, the installer automatically selects a site **only if exactly one** site has a dedicated development name such as `agentsteers-dev.localhost`, with an existing `site_config.json`. It links the local app into Bench, installs the package, then runs `install-app` when needed, `migrate`, `build`, and `clear-website-cache`. An ambiguous or non-development site is refused.
 
 ```bash
-export AGENTSTEERS_BENCH_DIR="/home/frappe/frappe-bench"
+cd agentsteers
+make dev                  # auto-detect Bench and dev site, then start mock MCP
+make frappe-install       # require a local Bench + dedicated dev site; fail if absent
+```
+
+For a Bench stored elsewhere, explicit overrides are still available:
+
+```bash
+export AGENTSTEERS_BENCH_DIR="/actual/path/to/frappe-bench"
 export AGENTSTEERS_FRAPPE_SITE="agentsteers-dev.localhost"
 export AGENTSTEERS_FRAPPE_DEV_CONFIRM="$AGENTSTEERS_FRAPPE_SITE"
 make dev
 ```
 
-Before running these commands, ensure `$AGENTSTEERS_BENCH_DIR/sites/$AGENTSTEERS_FRAPPE_SITE/site_config.json` exists and the Bench has a working `env/bin/python` and Frappe installation. The explicit confirmation variable prevents unintended installation when a site name is guessed. **Never point these variables at an ERPNext, EZ Workbase, or other production site.**
-
-The installer links this repository's `frappe_app/` to the selected Bench's `apps/agentsteers_frappe` (only if no conflicting path exists), installs it into the Bench's Python environment with `pip install -e`, checks installed apps, installs the app on the designated site if needed, runs `migrate`, builds assets, and clears that site's website cache. These steps alter the selected development site's schema and assets; run only on a dedicated development site with appropriate backups. `make frappe-install` performs just this installation/update without starting MCP.
-
-If the three environment variables are not set, `make dev` prints that Frappe installation is skipped and starts the existing loopback MCP mock server. No Frappe processes are started by `make dev`. Actual Frappe web serving requires running the dedicated Bench site separately, then verifying `/`, `/privacy`, and `/terms` locally. The public domain is **not** switched over.
+**Safety:** This never modifies an arbitrary ERPNext/EZ Workbase/production site, never starts Frappe's web process, and never redirects `agentsteers.com`. Install and test a separate development Bench/site before switching public traffic. If Frappe is not yet installed, provision the Bench and dedicated development site separately first.
 
 Other commands:
 
@@ -170,7 +176,7 @@ Other commands:
 | --- | --- |
 | `make help` | Display available targets. |
 | `make install` | Verify/rebuild a Python 3.11+ `.venv`, repair missing pip if possible, and install development dependencies. |
-| `make frappe-install` | Install or update the app on an explicitly configured dedicated Frappe development site. |
+| `make frappe-install` | Require a detected local Bench and dedicated AgentSteers dev site; install or update the App, otherwise fail safely. |
 | `make test` | Run the repository's Python unittest suite locally. |
 | `make pull` | Run `git pull --ff-only` on the current branch; refuse a divergent history. |
 | `make git-pull-force` | **Destructive**: on local `main` only, ask for exact `YES`, fetch `origin/main`, save a recovery ref and stash dirty tracked/untracked non-ignored changes, then `git reset --hard origin/main`. |
