@@ -150,7 +150,18 @@ def main() -> int:
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
     commit = verify_git_release()
-    bench = resolve_bench(site)
+    try:
+        bench = resolve_bench(site)
+    except RuntimeError as exc:
+        # New, single-purpose AgentSteers installation: initialise the managed
+        # Bench on the first publish only. Never use auto-setup for ambiguous
+        # existing Benches, explicit paths, or the read-only preflight mode.
+        if ("Could not auto-detect an existing Frappe Bench" not in str(exc)
+                or "--check" in sys.argv):
+            raise
+        print("No existing Frappe Bench found. Running first-time make setup automatically...", flush=True)
+        run([sys.executable, str(ROOT / "scripts" / "setup_managed_bench.py")], cwd=ROOT)
+        bench = resolve_bench(site)
     print(f"Production Bench candidate: {bench}", flush=True)
     require(bench != ROOT and (ROOT not in bench.parents or bench == ROOT / "frappe-bench"),
             "Only the project-managed frappe-bench/ subdirectory may serve as a Bench inside the repository.")
