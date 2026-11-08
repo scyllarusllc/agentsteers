@@ -12,6 +12,8 @@ import shutil
 import subprocess
 import sys
 
+from yarn_environment import ensure_yarn
+
 ROOT = Path(__file__).resolve().parent.parent
 BENCH = ROOT / "frappe-bench"
 SOURCE = ROOT / "frappe_app"
@@ -39,6 +41,7 @@ def main() -> None:
     os.environ.setdefault("BENCH_DISABLE_UV", "1")
     if os.environ["BENCH_DISABLE_UV"] == "1":
         print("Using Python venv + pip for Frappe Bench (uv disabled).", flush=True)
+    ensure_yarn()
     python = shutil.which("python3.11")
     if not python:
         abort("Python 3.11 is required for this setup preset.")
