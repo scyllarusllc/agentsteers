@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help install frappe-install frappe-dev-auto dev test pull git-pull-force
+.PHONY: help install frappe-install frappe-dev-auto dev publish test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Back up and deploy website to dedicated production Frappe Bench' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 install:
 	@command -v $(PYTHON) >/dev/null 2>&1 || { echo 'Python 3.11 not found. On CentOS Stream 9 run: sudo dnf install python3.11 python3.11-pip' >&2; exit 1; }
@@ -31,6 +31,9 @@ dev: install frappe-dev-auto
 	$(VENV_PYTHON) scripts/restart_dev_port.py; \
 	printf '%s\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
 	exec $(VENV_PYTHON) -m agentsteers.http_server
+
+publish:
+	@$(PYTHON) scripts/publish_frappe.py
 
 test: install
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -v
