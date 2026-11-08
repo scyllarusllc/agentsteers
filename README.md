@@ -11,16 +11,18 @@
 ```mermaid
 flowchart TD
     V["iPad — ChatGPT Voice Mode"]
-    P["AgentSteers Plugin"]
-    subgraph HOST["Owner's cloud server — same machine"]
-        A["AgentSteers<br/>Authorized task gateway"]
-        X["Codex CLI<br/>Local execution in restricted workspace"]
-        A -->|"Run approved task"| X
+    P["Private AgentSteers Plugin"]
+    subgraph HOST["Owner's cloud server — one machine"]
+        M["mcp.agentsteers.com<br/>HTTPS + verified OAuth access"]
+        A["AgentSteers<br/>Scoped task gateway"]
+        X["Codex CLI<br/>Restricted local execution"]
+        M <--> A
+        A -->|"Approved development task"| X
         X -->|"Progress and results"| A
     end
     V -->|"Voice instruction"| P
-    P -->|"Authenticated MCP request"| A
-    A -->|"Status and results"| P
+    P -->|"Authenticated MCP request"| M
+    M -->|"Task status and result"| P
     P -->|"Spoken feedback"| V
 ```
 
@@ -29,7 +31,22 @@ flowchart TD
 
 ## Intended public endpoint
 
-The future MCP endpoint is **`https://mcp.agentsteers.com/mcp`**, pointing to the owner's cloud server where AgentSteers and Codex CLI will run on the same machine. **This is a planned address, not a deployed or verified service.** The [deployment guide](deploy/README.md) includes a fail-closed HTTPS prelaunch configuration and security gates. The existing local development HTTP server must never be exposed to the Internet.
+The future MCP endpoint is **`https://mcp.agentsteers.com/mcp`**, pointing to the owner's cloud server where AgentSteers and Codex CLI will run on the same machine. **The domain registration, DNS, HTTPS endpoint, and service deployment are not yet confirmed or verified.** The [deployment guide](deploy/README.md) includes a fail-closed HTTPS prelaunch configuration and security gates. The existing local development HTTP server must never be exposed to the Internet.
+
+## Domain registration and deployment sequence
+
+The intended public address is **`https://mcp.agentsteers.com/mcp`**. The subdomain is an HTTPS entry point **on the same cloud server** as AgentSteers and Codex CLI, **not a separate relay server**. Domain registration was mentioned as in progress by the owner, **not confirmed complete**.
+
+1. **Register and verify domain:** confirm ownership of `agentsteers.com`. **Pending owner confirmation.**
+2. **Choose and authorize server:** obtain its public IP or SSH hostname and appropriate access. **Not provided/verified.**
+3. **Configure DNS:** point `mcp.agentsteers.com` to the authorized server, after ownership and address are confirmed. **Not performed.**
+4. **Provision HTTPS:** configure TLS reverse proxy with the fail-closed prelaunch site (503, no MCP proxy) from [deployment instructions](deploy/README.md). **Not deployed.**
+5. **Implement Google sign-in and MCP OAuth:** Google login proves identity; the MCP resource server separately verifies tokens, audience, allowed actions, and job ownership. **Not connected.**
+6. **Deploy authenticated AgentSteers MCP service:** enable the four scoped task operations first against mock jobs, with rate limits and audit logs; do not expose the existing unauthenticated loopback prototype. **Not deployed.**
+7. **Connect the existing private AgentSteers Plugin:** bind it to the verified HTTPS MCP endpoint, then verify actual ChatGPT Voice Mode tool invocation on iPad. **Not connected or tested.**
+8. **Enable same-server Codex CLI under a restricted worker:** only after the preceding security checks and mock end-to-end tests succeed; keep deployment and sensitive actions separately gated. **Not enabled.**
+
+**Existing deliverables:** the private Plugin (instructions only), four local MCP mock tools, protocol tests, HTTP loopback dev gateway, and prelaunch deployment scaffold are in place. **No live voice → plugin → server → Codex flow is claimed.**
 
 ## Proposed components
 
