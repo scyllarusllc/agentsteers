@@ -106,6 +106,11 @@ def resolve_bench(site: str) -> Path:
     configured = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip()
     if configured:
         return Path(configured).expanduser().resolve(strict=True)
+    # Project-managed Bench is the default. Its generated contents stay out of Git.
+    managed = ROOT / "frappe-bench"
+    if _looks_like_bench(managed, site):
+        print(f"Using project-managed Frappe Bench: {managed}", flush=True)
+        return managed.resolve()
     cwd = Path.cwd().resolve()
     if _looks_like_bench(cwd, site):
         return cwd
@@ -131,7 +136,8 @@ def resolve_bench(site: str) -> Path:
     if not candidates:
         raise RuntimeError(
             "Could not auto-detect an existing Frappe Bench for " + site
-            + ". Set AGENTSTEERS_PROD_BENCH_DIR to the actual Bench path once."
+            + ". Initialise the project-managed frappe-bench/ using the installation guide, "
+            "or set AGENTSTEERS_PROD_BENCH_DIR to an existing dedicated Bench."
         )
     raise RuntimeError(
         "Multiple Frappe Benches detected; choose explicitly with "
@@ -146,9 +152,8 @@ def main() -> int:
     commit = verify_git_release()
     bench = resolve_bench(site)
     print(f"Production Bench candidate: {bench}", flush=True)
-    require(bench != ROOT and ROOT not in bench.parents,
-            "Current directory is the AgentSteers Git checkout, not a production Bench. "
-            "Run from a dedicated Frappe Bench directory or set AGENTSTEERS_PROD_BENCH_DIR.")
+    require(bench != ROOT and (ROOT not in bench.parents or bench == ROOT / "frappe-bench"),
+            "Only the project-managed frappe-bench/ subdirectory may serve as a Bench inside the repository.")
     require((bench / "apps" / "frappe").is_dir()
             and (bench / "sites" / site / "site_config.json").is_file()
             and (bench / "env" / "bin" / "python").is_file(),
