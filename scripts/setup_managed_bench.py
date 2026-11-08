@@ -33,6 +33,12 @@ def main() -> None:
         abort("Interactive terminal required for safe database and Administrator password prompts.")
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         abort("Use a dedicated non-root Bench owner, not root.")
+    # Some CentOS installations cannot execute uv (e.g. noexec mounts).
+    # Bench officially supports pip + stdlib venv as a fallback.
+    # Leave an explicitly configured operator preference intact.
+    os.environ.setdefault("BENCH_DISABLE_UV", "1")
+    if os.environ["BENCH_DISABLE_UV"] == "1":
+        print("Using Python venv + pip for Frappe Bench (uv disabled).", flush=True)
     python = shutil.which("python3.11")
     if not python:
         abort("Python 3.11 is required for this setup preset.")
