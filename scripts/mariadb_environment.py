@@ -37,6 +37,28 @@ def _connects(host: str, port: int) -> bool:
         return False
 
 
+
+def _show_start_failure_diagnostics() -> None:
+    """Read-only diagnostics; never attempt another privileged action."""
+    commands = [
+        ["systemctl", "status", "mariadb", "--no-pager", "-l"],
+        ["journalctl", "-u", "mariadb", "-n", "50", "--no-pager"],
+    ]
+    for command in commands:
+        print("\n--- " + " ".join(command) + " ---", flush=True)
+        try:
+            result = subprocess.run(command, capture_output=True, text=True, timeout=15)
+            detail = (result.stdout + "\n" + result.stderr).strip()
+            if detail:
+                print(detail, flush=True)
+            if result.returncode and command[0] == "journalctl":
+                print("Journal access may require elevated privileges.", flush=True)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            print(f"Could not read diagnostics: {exc}", flush=True)
+    print("If journal entries are restricted, run: "
+          "sudo journalctl -u mariadb -n 50 --no-pager", flush=True)
+
+
 def ensure_mariadb(bench: Path | None = None, site: str = "agentsteers.com",
                    *, check_only: bool = False) -> None:
     """Check TCP MariaDB reachability; offer local service start with consent."""
@@ -76,7 +98,14 @@ def ensure_mariadb(bench: Path | None = None, site: str = "agentsteers.com",
 
     if not shutil.which("sudo"):
         raise RuntimeError("sudo unavailable; start mariadb.service through your administrator.")
-    subprocess.run(["sudo", "systemctl", "start", "mariadb"], check=True)
+    try:
+        subprocess.run(["sudo", "systemctl", "start", "mariadb"], check=True)
+    except subprocess.CalledProcessError as exc:
+        print("MariaDB start failed; collecting read-only service diagnostics.", flush=True)
+        _show_start_failure_diagnostics()
+        raise RuntimeError(
+            "MariaDB service failed to start; see systemctl status and journal logs above."
+        ) from exc
     for _ in range(10):
         if _connects(host, port):
             print(f"MariaDB service started; {host}:{port} is reachable.", flush=True)
