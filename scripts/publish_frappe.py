@@ -362,10 +362,22 @@ def main() -> int:
     require((bench / "sites" / "common_site_config.json").is_file(),
             "Bench configuration missing.")
     # Avoid restarts / schema changes to other applications in a shared Bench.
-    sites = [
-        p.name for p in (bench / "sites").iterdir()
-        if p.is_dir() and (p / "site_config.json").is_file()
-    ]
+    sites_dir = bench / "sites"
+    archived_site_pattern = re.compile(r"^\\.agentsteers-incomplete-\\d{8}T\\d{6}Z$")
+    sites = []
+    archived_sites = []
+    for p in sites_dir.iterdir():
+        if not p.is_dir() or not (p / "site_config.json").is_file():
+            continue
+        if (bench == ROOT / "frappe-bench"
+                and not p.is_symlink()
+                and archived_site_pattern.fullmatch(p.name)):
+            archived_sites.append(p.name)
+            continue
+        sites.append(p.name)
+    if archived_sites:
+        print("Preserved incomplete-site archives (not active sites): "
+              + ", ".join(sorted(archived_sites)), flush=True)
     if sites != [DOMAIN]:
         sites_dir = bench / "sites"
         print("Single-site Bench diagnostic (read-only):", flush=True)
