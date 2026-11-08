@@ -6,6 +6,8 @@ This is intentionally NOT a production installer, DNS/proxy editor, or MCP deplo
 from __future__ import annotations
 
 import os
+import json
+import datetime
 import re
 from pathlib import Path
 import shutil
@@ -17,7 +19,7 @@ import urllib.error
 
 from yarn_environment import ensure_yarn
 from mariadb_environment import ensure_mariadb
-from frappe_database_auth import repair_missing_site_account
+from frappe_database_auth import repair_missing_site_account, _root_sql, _literal
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "frappe_app"
@@ -273,6 +275,60 @@ def ensure_apps_manifest(bench: Path, *, check_only: bool = False) -> None:
         print("Added missing Frappe app entries: " + ", ".join(missing), flush=True)
 
 
+def offer_fresh_site_recovery(bench: Path, site: str, bench_cli: str) -> bool:
+    """Explicitly rebuild a verified missing-database site, preserving old files."""
+    if not sys.stdin.isatty() or bench != (ROOT / "frappe-bench").resolve():
+        return False
+    site_dir = bench / "sites" / site
+    config_path = site_dir / "site_config.json"
+    if site_dir.is_symlink() or config_path.is_symlink():
+        raise RuntimeError("Symlinked site configuration; recovery refused.")
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+    db_name = config.get("db_name")
+    if not isinstance(db_name, str) or not re.fullmatch(r"[A-Za-z0-9_]+", db_name):
+        raise RuntimeError("Invalid configured database name; recovery refused.")
+    print("Checking whether the configured site database is actually missing. "
+          "Linux root authentication may be requested.", flush=True)
+    result = _root_sql(
+        "SELECT COUNT(*) FROM information_schema.SCHEMATA "
+        f"WHERE SCHEMA_NAME={_literal(db_name)};\\n", read_only=True
+    ).strip()
+    if result != "0":
+        print("Recovery refused: database exists or the inspection was inconclusive.",
+              flush=True)
+        return False
+    print("The configured database is absent. This may be an incomplete first-time "
+          "installation. Existing site files will be preserved in a separate directory.",
+          flush=True)
+    answer = input("Type REINITIALIZE EMPTY SITE to create a fresh Frappe site: ").strip()
+    if answer != "REINITIALIZE EMPTY SITE":
+        print("Fresh-site initialization skipped.", flush=True)
+        return False
+    stamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    archive = bench / "sites" / (".agentsteers-incomplete-" + stamp)
+    if archive.exists():
+        raise RuntimeError("Recovery archive already exists; refusing to overwrite.")
+    site_dir.rename(archive)
+    print(f"Preserved previous site directory at {archive}", flush=True)
+    try:
+        # Bench securely prompts for database administrator and Frappe
+        # Administrator passwords; never supply secrets on the command line.
+        run([bench_cli, "new-site", site], cwd=bench)
+    except BaseException:
+        if not site_dir.exists():
+            archive.rename(site_dir)
+            print("Restored original site directory after failed initialization.",
+                  file=sys.stderr, flush=True)
+        else:
+            print("Initialization failed and created partial files. Preserved both "
+                  "directories for manual inspection; no automatic deletion.",
+                  file=sys.stderr, flush=True)
+        raise
+    print("Fresh Frappe site initialized; previous site files remain archived.",
+          flush=True)
+    return True
+
+
 def main() -> int:
     # Use the standard-library venv/pip path by default throughout publish.
     os.environ.setdefault("BENCH_DISABLE_UV", "1")
@@ -352,7 +408,14 @@ def main() -> int:
             raise
         if "--check" in sys.argv or "[MariaDB authentication 1045]" not in str(exc):
             raise
-        if not repair_missing_site_account(bench, site):
+        try:
+            repaired = repair_missing_site_account(bench, site)
+        except RuntimeError as diagnostic_error:
+            if "site database does not exist" not in str(diagnostic_error):
+                raise
+            print("The configured Frappe database is missing.", flush=True)
+            repaired = offer_fresh_site_recovery(bench, site, bench_cli)
+        if not repaired:
             raise
         run(list_args, cwd=bench, capture=True)
 
