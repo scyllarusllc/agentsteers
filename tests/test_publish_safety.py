@@ -29,7 +29,7 @@ class PublishSafetyTests(unittest.TestCase):
             p = patch.object(publish, name, value); p.start(); self.addCleanup(p.stop)
         for name in ['verify_git_release', 'resolve_bench', 'ensure_apps_manifest',
                      'ensure_mariadb', 'diagnose_site_database_config', 'confirm_release',
-                     'ensure_yarn', 'run', 'health_check']:
+                     'ensure_yarn', 'run', 'health_check', 'initialize_fresh_site']:
             p = patch.object(publish, name); mock = p.start(); self.addCleanup(p.stop)
             setattr(self, name, mock)
         self.resolve_bench.return_value = self.bench
@@ -50,6 +50,21 @@ class PublishSafetyTests(unittest.TestCase):
         self.assertEqual(self.run.call_count, 1)
         self.ensure_mariadb.assert_called_once_with(self.bench, 'agentsteers.com', check_only=True)
         self.ensure_apps_manifest.assert_called_once_with(self.bench, check_only=True)
+
+    def test_confirmed_fresh_initialization_retries_login_before_backup(self):
+        self.run.side_effect = [RuntimeError('[MariaDB authentication failed]'),
+                                'frappe', RuntimeError('backup failed')]
+        with patch.object(sys, 'argv', ['publish']), self.assertRaisesRegex(RuntimeError, 'backup failed'):
+            publish.main()
+        self.initialize_fresh_site.assert_called_once_with(self.bench, self.root)
+        self.assertEqual(self.run.call_args_list[1].args[0][-1], 'list-apps')
+        self.assertIn('backup', self.run.call_args_list[2].args[0])
+
+    def test_readonly_auth_failure_never_initializes(self):
+        self.run.side_effect = RuntimeError('[MariaDB authentication failed]')
+        with patch.object(sys, 'argv', ['publish', '--check']), self.assertRaises(RuntimeError):
+            publish.main()
+        self.initialize_fresh_site.assert_not_called()
 
     def test_missing_bench_does_not_run_setup(self):
         self.resolve_bench.side_effect = RuntimeError('No Bench; use make setup')

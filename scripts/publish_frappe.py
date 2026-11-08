@@ -17,6 +17,7 @@ import urllib.request
 import urllib.error
 
 from yarn_environment import ensure_yarn
+from initialize_fresh_site import initialize_fresh_site
 from mariadb_environment import ensure_mariadb
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -69,7 +70,7 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
                 print("A database administrator must reconcile the account and site configuration "
                       "before publishing; do not reset the MariaDB root password or delete the site. "
                       "For error 1698, verify whether the administrator account requires Unix socket "
-                      "authentication as Linux root. Publish will not initialize or rebuild a site.",
+                      "authentication as Linux root. Fresh initialization is offered only after verifying that both database and account are absent.",
                       file=sys.stderr, flush=True)
             elif details:
                 print(details, file=sys.stderr, flush=True)
@@ -292,7 +293,7 @@ def main() -> int:
             "Bench configuration missing.")
     # Avoid restarts / schema changes to other applications in a shared Bench.
     sites_dir = bench / "sites"
-    archived_site_pattern = re.compile(r"^\.agentsteers-incomplete-\d{8}T\d{6}Z$")
+    archived_site_pattern = re.compile(r"^\.agentsteers-incomplete-\d{8}T\d{6}(?:\d{6})?Z$")
     sites = []
     archived_sites = []
     for p in sites_dir.iterdir():
@@ -347,7 +348,13 @@ def main() -> int:
     ensure_apps_manifest(bench, check_only=True)
     ensure_mariadb(bench, site, check_only=True)
     diagnose_site_database_config(bench, site)
-    run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
+    try:
+        run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
+    except RuntimeError as exc:
+        if "--check" in sys.argv or "[MariaDB authentication failed]" not in str(exc):
+            raise
+        initialize_fresh_site(bench, ROOT)
+        run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
 
     if "--check" in sys.argv:
         print(f"Publish preflight passed for {DOMAIN} at {commit}. No backups, migrations, or restarts executed.", flush=True)

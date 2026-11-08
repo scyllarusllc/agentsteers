@@ -52,11 +52,17 @@ are included. A behind-only branch can be fast-forwarded with confirmation;
 review incoming changes and rerun so the updated script is loaded. Diverged
 branches stop for manual resolution. No force push, reset, or stash is used.
 
-First-time initialization belongs to `make setup`, not `make publish`. A missing
-site or database login failure stops publication without rebuilding the site or
-renaming its files. Resolve MariaDB 1045/1698 with the administrator: verify the
-configured site account and grants, and distinguish Unix socket administrator
-login from password login. Do not reset root authentication or delete existing
-sites to bypass these checks. Preserve partial-site archives for manual recovery.
+For an incomplete fresh installation in the managed Bench, `make publish` can
+initialize the site after a failed database login. It first verifies through Linux
+root socket access that both the database and account are absent. It then asks
+for `INITIALIZE FRESH SITE`, creates only that database and local account, archives
+the partial site files, and bootstraps Frappe as the non-root Bench owner. Linux
+`su` may prompt for the Linux root password; MariaDB root authentication is never
+changed or passed to Frappe. The Frappe Administrator password is prompted by
+Frappe itself. Existing databases/accounts always block this initialization.
+Failures preserve database objects and files for inspection and stop rather than
+reinitializing repeatedly. Once initialized, publishing validates login, takes a
+full backup, and follows the normal deployment steps. A completely absent Bench
+still requires `make setup`; this recovery handles the existing partial site.
 
 This publishes `agentsteers.com`; it does not publish MCP, edit Caddy, or run Codex.
