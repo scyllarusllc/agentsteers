@@ -33,12 +33,27 @@ def main() -> None:
         abort("Interactive terminal required for safe database and Administrator password prompts.")
     if hasattr(os, "geteuid") and os.geteuid() == 0:
         abort("Use a dedicated non-root Bench owner, not root.")
-    cli = shutil.which("bench")
-    if not cli:
-        abort("Bench CLI not found. Install supported Frappe prerequisites and 'frappe-bench' first.")
     python = shutil.which("python3.11")
     if not python:
         abort("Python 3.11 is required for this setup preset.")
+    # Use a repository-local virtual environment instead of modifying the
+    # system Python or requiring sudo. The environment is ignored by Git.
+    managed_cli = ROOT / ".bench-cli-venv" / "bin" / "bench"
+    cli = shutil.which("bench")
+    if not cli:
+        if not managed_cli.is_file():
+            venv_dir = ROOT / ".bench-cli-venv"
+            if venv_dir.is_symlink():
+                abort("Refusing symlinked local Bench CLI environment.")
+            if not (venv_dir / "bin" / "python").is_file():
+                print("Bootstrapping project-local Frappe Bench CLI environment...", flush=True)
+                run(python, "-m", "venv", str(venv_dir))
+            print("Installing Bench CLI in project-local environment...", flush=True)
+            run(str(venv_dir / "bin" / "python"), "-m", "pip", "install",
+                "frappe-bench>=5,<6")
+        cli = str(managed_cli)
+    if not Path(cli).is_file():
+        abort("Bench CLI installation was not successful.")
     if BENCH.is_symlink():
         abort("Refusing symlink for the project-managed Bench.")
 
