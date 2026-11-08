@@ -338,6 +338,18 @@ def main() -> int:
     try:
         run(list_args, cwd=bench, capture=True)
     except RuntimeError as exc:
+        if "--check" in sys.argv and "[MariaDB authentication 1045]" in str(exc):
+            if sys.stdin.isatty():
+                print("Optional read-only account inspection requires Linux root "
+                      "authentication via su. No database changes will be made.", flush=True)
+                answer = input("Type INSPECT DB ACCOUNT to proceed, or Enter to skip: ").strip()
+                if answer == "INSPECT DB ACCOUNT":
+                    try:
+                        repair_missing_site_account(bench, site, inspect_only=True)
+                    except RuntimeError as diagnostic_error:
+                        print(f"Read-only account inspection unavailable: {diagnostic_error}",
+                              file=sys.stderr, flush=True)
+            raise
         if "--check" in sys.argv or "[MariaDB authentication 1045]" not in str(exc):
             raise
         if not repair_missing_site_account(bench, site):
