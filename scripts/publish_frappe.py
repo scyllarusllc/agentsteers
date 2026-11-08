@@ -96,17 +96,18 @@ def health_check(commit: str) -> None:
 
 
 def main() -> int:
-    path = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip()
+    path = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip() or str(Path.cwd())
     site = os.environ.get("AGENTSTEERS_PROD_SITE", DOMAIN).strip()
-    require(bool(path), "Set AGENTSTEERS_PROD_BENCH_DIR to the dedicated production Bench path.")
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.environ.get("AGENTSTEERS_PUBLISH_CONFIRM") == "PUBLISH agentsteers.com",
             "Set AGENTSTEERS_PUBLISH_CONFIRM='PUBLISH agentsteers.com' to allow production changes.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
     commit = verify_git_release()
     bench = Path(path).expanduser().resolve(strict=True)
+    print(f"Production Bench candidate: {bench}", flush=True)
     require(bench != ROOT and ROOT not in bench.parents,
-            "The production Bench must be separate from this Git checkout.")
+            "Current directory is the AgentSteers Git checkout, not a production Bench. "
+            "Run from a dedicated Frappe Bench directory or set AGENTSTEERS_PROD_BENCH_DIR.")
     require((bench / "apps" / "frappe").is_dir()
             and (bench / "sites" / site / "site_config.json").is_file()
             and (bench / "env" / "bin" / "python").is_file(),
