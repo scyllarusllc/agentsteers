@@ -8,3 +8,6 @@ required_apps = ["frappe"]
 
 # Route the root domain to the Frappe-hosted landing page.
 home_page = "index"
+
+# Style Frappe website login/signup forms without replacing authentication routes.
+web_include_css = ["/assets/agentsteers_frappe/css/login.css"]
