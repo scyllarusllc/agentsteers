@@ -226,3 +226,14 @@ make git-pull-force
 **Force-sync warning:** This can overwrite local changes to tracked files and discard local-only commits from the active branch. A pre-reset commit reference is saved under `refs/backup/agentsteers-main-...`; if the working tree was dirty, the command also creates a stash and `refs/backup/agentsteers-worktree-...`. Untracked non-ignored files are stashed; **ignored files are not saved by this command and are not removed**. No `git clean` is performed. Recovery is manual. Review `git status` and back up important work separately before proceeding. Never invoke the force-sync target automatically from `make dev`.
 
 **Verification:** These Makefile commands are committed to GitHub, but their operation on the target CentOS server has not yet been verified.
+
+
+### Opt-in MCP → Frappe task persistence (development)
+
+The MCP server defaults to an in-memory mock. To persist queued (inert) tasks in a running Frappe Bench with the AgentSteers app installed, configure **both sides**:
+
+1. In the dedicated Frappe site's `site_config.json`, set `"agentsteers_allowed_repositories": ["scyllarusllc/agentsteers"]` (replace with your approved repositories). The API refuses task creation with an empty allowlist.
+2. Create a dedicated Frappe API user with permission to create `AgentSteers Task` records. Never reuse an administrator's personal token or expose these credentials in the browser.
+3. Set `AGENTSTEERS_FRAPPE_URL=https://your-frappe-host`, `AGENTSTEERS_FRAPPE_API_KEY`, `AGENTSTEERS_FRAPPE_API_SECRET`, and `AGENTSTEERS_MOCK_REPOS=scyllarusllc/agentsteers` in the **local MCP server process's secret environment**, not client tool arguments. Despite the legacy environment variable name, `AGENTSTEERS_MOCK_REPOS` is the MCP-side allowlist in either mode. All three Frappe connection variables are mandatory when any is supplied.
+
+The MCP `submit_task` tool then calls `agentsteers_frappe.api.create_task`, which derives owner identity from Frappe authentication and records a `Queued` task; `get_task_status` queries only records owned by that user. A client-supplied `approved` flag is **not secure human approval** and must not authorise execution. No worker consumes these tasks. Frappe mode's `cancel_task` explicitly reports unsupported. This is a development bridge with a single configured Frappe user, **not** multi-user OAuth or a public ChatGPT MCP connection. Before any worker is enabled, implement enforceable server-side approvals, identity mapping, queue claim/locking and permission isolation.
