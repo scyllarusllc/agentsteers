@@ -17,6 +17,7 @@ import urllib.error
 
 from yarn_environment import ensure_yarn
 from mariadb_environment import ensure_mariadb
+from frappe_database_auth import repair_missing_site_account
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "frappe_app"
@@ -72,14 +73,15 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
                 print("A database administrator must reconcile the account and site configuration "
                       "before publishing; do not reset the MariaDB root password or delete the site.",
                       file=sys.stderr, flush=True)
-                if "--check" not in sys.argv:
-                    diagnose_database_accounts()
             elif details:
                 print(details, file=sys.stderr, flush=True)
+            marker = " [MariaDB authentication 1045]" if re.search(
+                r"Access denied for user .*using password:", details, re.I
+            ) else ""
             raise RuntimeError(
                 f"Bench command failed (exit {result.returncode}): "
                 + " ".join(args)
-                + ". See Frappe error output above."
+                + marker + ". See Frappe error output above."
             )
         return result.stdout
     subprocess.run(args, cwd=cwd, text=True, check=True)
@@ -283,8 +285,18 @@ def main() -> int:
 
     ensure_mariadb(bench, site, check_only="--check" in sys.argv)
 
-    # Verify site and database are accessible BEFORE attempting changes.
-    run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
+    # Verify site and database are accessible BEFORE normal deployment changes.
+    # Only after error 1045, allow explicit creation of a *missing* local
+    # account. Never change a pre-existing account or password.
+    list_args = [bench_cli, "--site", site, "list-apps"]
+    try:
+        run(list_args, cwd=bench, capture=True)
+    except RuntimeError as exc:
+        if "--check" in sys.argv or "[MariaDB authentication 1045]" not in str(exc):
+            raise
+        if not repair_missing_site_account(bench, site):
+            raise
+        run(list_args, cwd=bench, capture=True)
 
     if "--check" in sys.argv:
         print(f"Publish preflight passed for {DOMAIN} at {commit}. No backups, migrations, or restarts executed.", flush=True)
