@@ -128,7 +128,7 @@ Do not treat the mock worker as proof of a working cloud bridge. Develop and tes
 
 ### Local development commands (Makefile)
 
-Requires Python 3.10+, `make`, Git, and Python virtual environment support. From the repository root:
+Requires Python 3.11+, `make`, Git, and Python virtual environment support. On CentOS Stream 9, install the interpreter and pip if needed with `sudo dnf install python3.11 python3.11-pip`. From the repository root:
 
 ```bash
 make help
@@ -136,7 +136,7 @@ make install
 make dev
 ```
 
-`make dev` installs the editable package plus MCP, Uvicorn and JWT dependencies into `.venv`, generates an **ephemeral development bearer token** if `AGENTSTEERS_DEV_TOKEN` is unset, and starts the mock MCP HTTP service **only on `127.0.0.1:8765`**. The local endpoint is `http://127.0.0.1:8765/mcp`. The generated token is deliberately not printed; if you need to authenticate a separate local client, set a strong token yourself before starting the server:
+`make dev` checks that `.venv` uses Python 3.11+ and has pip, attempts `ensurepip` repair, and backs up an incompatible virtual environment as `.venv.backup.*` before recreating it. It does not modify the system Python. It then installs the editable package plus MCP, Uvicorn and JWT dependencies into `.venv`, generates an **ephemeral development bearer token** if `AGENTSTEERS_DEV_TOKEN` is unset, and starts the mock MCP HTTP service **only on `127.0.0.1:8765`**. The local endpoint is `http://127.0.0.1:8765/mcp`. The generated token is deliberately not printed; if you need to authenticate a separate local client, set a strong token yourself before starting the server:
 
 ```bash
 export AGENTSTEERS_DEV_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
@@ -150,7 +150,7 @@ Other commands:
 | Command | Behavior |
 | --- | --- |
 | `make help` | Display available targets. |
-| `make install` | Create `.venv` and install development dependencies. |
+| `make install` | Verify/rebuild a Python 3.11+ `.venv`, repair missing pip if possible, and install development dependencies. |
 | `make test` | Run the repository's Python unittest suite locally. |
 | `make pull` | Run `git pull --ff-only` on the current branch; refuse a divergent history. |
 | `make git-pull-force` | **Destructive**: on local `main` only, ask for exact `YES`, fetch `origin/main`, save a recovery ref and stash dirty tracked/untracked non-ignored changes, then `git reset --hard origin/main`. |
