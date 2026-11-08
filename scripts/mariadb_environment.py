@@ -83,7 +83,7 @@ def _authorize_mariadb_start(systemctl: str) -> None:
         "set -eu; "
         "tmp=$(mktemp /etc/sudoers.d/.agentsteers-mariadb.XXXXXX); "
         'trap \'rm -f "$tmp"\' EXIT; '
-        f"printf '%s\\n' '{rule}' > \\"$tmp\\"; "
+        f'printf "%s\\n" "{rule}" > "$tmp"; '
         'chmod 0440 "$tmp"; '
         'visudo -cf "$tmp"; '
         'mv -f "$tmp" /etc/sudoers.d/agentsteers-mariadb'
