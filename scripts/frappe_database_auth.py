@@ -7,6 +7,9 @@ Root authentication is performed by the OS 'su' command.
 from __future__ import annotations
 
 import json
+import os
+import shlex
+import tempfile
 from pathlib import Path
 import re
 import shutil
@@ -28,27 +31,37 @@ def _identifier(value: str) -> str:
 
 
 def _root_sql(sql: str, *, read_only: bool = False) -> str:
-    """Use the controlling terminal for su authentication, never SQL stdin.
+    """Authenticate su through the terminal; give MariaDB separate SQL input.
 
-    MariaDB SQL is piped separately. No passwords are printed or put in argv.
-    Do not automatically retry failed authentication or potentially partial writes.
+    A private temporary SQL file is removed after the single attempt. It is
+    never printed, and neither SQL nor passwords appear in process arguments.
     """
     if not shutil.which("su") or not shutil.which("mariadb"):
         raise RuntimeError("su and mariadb client are required for account inspection.")
-    if not sys.stdin.isatty() or not sys.stderr.isatty():
+    if not sys.stdin.isatty():
         raise RuntimeError("Interactive terminal required for Linux root authentication.")
-    print("Linux root authentication will be requested by su in this terminal. "
-          "Input will not be echoed. One attempt only.", flush=True)
-    command = "mariadb --batch --skip-column-names --raw"
-    result = subprocess.run(
-        ["su", "-c", command],
-        input="SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\\n" + sql,
-        text=True, stdout=subprocess.PIPE, stderr=None, check=False,
-    )
-    if result.returncode != 0:
-        raise RuntimeError("Linux root authentication or MariaDB administrator query "
-                           "failed. See terminal output. No automatic retry.")
-    return result.stdout.strip()
+    print("su will ask for the Linux root password in the terminal. "
+          "Password input is hidden; one attempt only.", flush=True)
+    with tempfile.TemporaryDirectory(prefix="agentsteers-db-check-") as folder:
+        sql_path = Path(folder) / "query.sql"
+        fd = os.open(sql_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as stream:
+                stream.write("SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\\n")
+                stream.write(sql)
+        except BaseException:
+            raise
+        command = ("mariadb --batch --skip-column-names --raw < "
+                   + shlex.quote(str(sql_path)))
+        result = subprocess.run(
+            ["su", "-c", command],
+            stdin=None, stdout=subprocess.PIPE, stderr=None,
+            text=True, check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError("Linux root authentication or MariaDB administrator "
+                               "query failed. See terminal output; no automatic retry.")
+        return result.stdout.strip()
 
 
 def repair_missing_site_account(bench: Path, site: str, *, inspect_only: bool = False) -> bool:
