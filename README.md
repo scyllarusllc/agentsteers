@@ -277,3 +277,8 @@ make publish
 First-time `make publish` (or explicit `make setup`) now provisions Frappe's `bench` command into the ignored `.bench-cli-venv/` using Python 3.11. It reuses the executable on subsequent runs and does not use global `pip install` or `sudo`. The publishing script also discovers this local executable. The Frappe Bench itself uses a separate `frappe-bench/env/` environment; AgentSteers MCP development uses `.venv/`. These environments have different purposes and must not be committed to Git.
 
 System packages, running MariaDB/Redis services, Node/Yarn, Python 3.11 and production TLS/reverse-proxy setup are **not** installed or configured by this step. Setup remains interactive, non-root, and requires a fresh dedicated site. The workflow has not yet been verified on the owner's CentOS server.
+
+
+### Yarn permission fallback (CentOS)
+
+`make publish` now verifies Node.js and an executable Yarn Classic (v1) before launching Frappe Bench. If the global `yarn` command is absent, broken or returns `Permission denied`, the script uses `npm` (without sudo) to install `yarn@1.22.22` in the ignored `.node-tools/` directory and prepends its bin directory to child process `PATH`. It does **not** chmod globally installed files or change ownership. If Node.js/npm themselves cannot execute, or the project filesystem has `noexec`, a manual host permission/mount fix is still required. `make publish-check` remains read-only and does not install tools. If the previous failed `bench init` left an incomplete `frappe-bench/`, the setup refuses to erase it automatically; inspect the partial directory before deciding how to repair it. Avoid `sudo make publish`.
