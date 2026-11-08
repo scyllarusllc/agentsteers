@@ -38,7 +38,7 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
             details = (result.stderr or result.stdout or "").strip()
             if re.search(r"Access denied for user .*using password:", details, re.I):
                 print("MariaDB rejected the Frappe site's database credentials (error 1045).", file=sys.stderr, flush=True)
-                print("The database username is read automatically from sites/agentsteers.com/site_config.json; "
+                print("Frappe reads the database username from its site configuration; "
                       "you do NOT need to type or share it.", file=sys.stderr, flush=True)
                 print("This can mean a missing database account, mismatched password, "
                       "or incorrect user@host grants. The existing site configuration "
