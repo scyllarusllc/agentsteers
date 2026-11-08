@@ -29,9 +29,21 @@ def require(condition: bool, message: str) -> None:
 
 def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
     print("+ " + " ".join(args), flush=True)
-    result = subprocess.run(args, cwd=cwd, text=True, check=True,
-                            capture_output=capture)
-    return result.stdout if capture else ""
+    if capture:
+        result = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
+        if result.returncode:
+            # Show the real Frappe traceback without hiding it behind exit status 1.
+            details = (result.stderr or result.stdout or "").strip()
+            if details:
+                print(details, file=sys.stderr, flush=True)
+            raise RuntimeError(
+                f"Bench command failed (exit {result.returncode}): "
+                + " ".join(args)
+                + ". See Frappe error output above."
+            )
+        return result.stdout
+    subprocess.run(args, cwd=cwd, text=True, check=True)
+    return ""
 
 
 def verify_git_release() -> str:
