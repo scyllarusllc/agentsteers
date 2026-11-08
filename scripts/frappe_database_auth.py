@@ -27,22 +27,45 @@ def _identifier(value: str) -> str:
     return "`" + value + "`"
 
 
-def _root_sql(sql: str) -> str:
-    """Use MariaDB's local root socket, with SQL only on stdin (not argv)."""
+def _root_sql(sql: str, *, read_only: bool = False) -> str:
+    """Run local MariaDB as root; retry only failed su authentication for reads.
+
+    SQL travels on stdin, not argv. Never replay potentially partial writes.
+    """
     if not shutil.which("su") or not shutil.which("mariadb"):
         raise RuntimeError("su and mariadb client are required for account inspection.")
     command = "mariadb --batch --skip-column-names --raw"
-    result = subprocess.run(
-        ["su", "-c", command], input="SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\n" + sql,
-        text=True, capture_output=True, check=False,
-    )
-    if result.returncode:
-        # Do not echo SQL, root stderr or site secrets into deployment logs.
-        raise RuntimeError(
-            "MariaDB administrator query failed. Check the Linux root password "
-            "and local MariaDB root socket authentication; no existing credentials were changed."
+    max_attempts = 3 if read_only else 1
+    for attempt in range(1, max_attempts + 1):
+        if read_only:
+            print(f"Linux root authentication attempt {attempt}/{max_attempts}.",
+                  flush=True)
+        result = subprocess.run(
+            ["su", "-c", command],
+            input="SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\n" + sql,
+            text=True, capture_output=True, check=False,
         )
-    return result.stdout.strip()
+        if result.returncode == 0:
+            return result.stdout.strip()
+        # Only retry if su itself rejected the login. SQL/permission errors,
+        # even on a read-only query, must not be mistaken for password typos.
+        authentication_failed = bool(re.search(
+            r"(?:authentication failure|incorrect password|sorry, try again)",
+            result.stderr or "", flags=re.IGNORECASE,
+        ))
+        if read_only and authentication_failed and attempt < max_attempts:
+            print("Linux root authentication failed. You can retry the password.",
+                  file=sys.stderr, flush=True)
+            continue
+        if authentication_failed:
+            raise RuntimeError(
+                "Linux root authentication failed. No site or database changes were made."
+            )
+        raise RuntimeError(
+            "MariaDB administrator query failed; check local MariaDB root socket "
+            "permissions. Query errors will not be retried automatically."
+        )
+    raise RuntimeError("Linux root authentication attempts exhausted.")
 
 
 def repair_missing_site_account(bench: Path, site: str) -> bool:
@@ -82,7 +105,7 @@ def repair_missing_site_account(bench: Path, site: str) -> bool:
         "SELECT CONCAT('ACCOUNT:', COUNT(*)) FROM mysql.user "
         f"WHERE User={_literal(user)};\n"
     )
-    output = _root_sql(check_sql).splitlines()
+    output = _root_sql(check_sql, read_only=True).splitlines()
     if len(output) != 2 or output[0] not in ("DATABASE:0", "DATABASE:1") or not re.fullmatch(r"ACCOUNT:\d+", output[1]):
         raise RuntimeError("Unexpected MariaDB inspection result; no repair attempted.")
     if output[0] == "DATABASE:0":
