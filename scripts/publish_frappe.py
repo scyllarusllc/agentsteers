@@ -15,6 +15,7 @@ import urllib.request
 import urllib.error
 
 from yarn_environment import ensure_yarn
+from mariadb_environment import ensure_mariadb
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "frappe_app"
@@ -240,6 +241,8 @@ def main() -> int:
     require(bool(bench_cli), "Bench CLI not found.")
 
     ensure_apps_manifest(bench, check_only="--check" in sys.argv)
+
+    ensure_mariadb(bench, site, check_only="--check" in sys.argv)
 
     # Verify site and database are accessible BEFORE attempting changes.
     run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
