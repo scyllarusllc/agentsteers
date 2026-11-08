@@ -6,6 +6,7 @@ This is intentionally NOT a production installer, DNS/proxy editor, or MCP deplo
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 import shutil
 import subprocess
@@ -35,7 +36,17 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
         if result.returncode:
             # Show the real Frappe traceback without hiding it behind exit status 1.
             details = (result.stderr or result.stdout or "").strip()
-            if details:
+            if re.search(r"Access denied for user .*using password:", details, re.I):
+                print("MariaDB rejected the Frappe site's database credentials (error 1045).", file=sys.stderr, flush=True)
+                print("The database username is read automatically from sites/agentsteers.com/site_config.json; "
+                      "you do NOT need to type or share it.", file=sys.stderr, flush=True)
+                print("This can mean a missing database account, mismatched password, "
+                      "or incorrect user@host grants. The existing site configuration "
+                      "and credentials have NOT been changed.", file=sys.stderr, flush=True)
+                print("A database administrator must reconcile the account and site configuration "
+                      "before publishing; do not reset the MariaDB root password or delete the site.",
+                      file=sys.stderr, flush=True)
+            elif details:
                 print(details, file=sys.stderr, flush=True)
             raise RuntimeError(
                 f"Bench command failed (exit {result.returncode}): "
