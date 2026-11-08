@@ -30,6 +30,29 @@ def _identifier(value: str) -> str:
     return "`" + value + "`"
 
 
+def diagnose_mariadb_root_socket() -> bool:
+    """Read-only MariaDB root socket test via interactive Linux su."""
+    if not sys.stdin.isatty() or not shutil.which("su") or not shutil.which("mariadb"):
+        print("Socket diagnostic requires an interactive terminal and su/mariadb.",
+              file=sys.stderr, flush=True)
+        return False
+    print("Testing MariaDB root via local Unix socket. Linux su may prompt "
+          "for its password. No database changes will be made.", flush=True)
+    result = subprocess.run(
+        ["su", "-c",
+         "mariadb --protocol=socket -u root --batch --skip-column-names "
+         "-e 'SELECT CURRENT_USER(), VERSION();'"],
+        stdin=None, stdout=subprocess.PIPE, stderr=None, text=True, check=False,
+    )
+    if result.returncode == 0:
+        print("MariaDB root socket authentication succeeded.", flush=True)
+        return True
+    print("MariaDB root socket authentication failed (or Linux su was denied). "
+          "See the preceding terminal error. No credentials or privileges "
+          "were changed.", file=sys.stderr, flush=True)
+    return False
+
+
 def _root_sql(sql: str, *, read_only: bool = False) -> str:
     """Authenticate su through the terminal; give MariaDB separate SQL input.
 
@@ -51,7 +74,7 @@ def _root_sql(sql: str, *, read_only: bool = False) -> str:
                 stream.write(sql)
         except BaseException:
             raise
-        command = ("mariadb --batch --skip-column-names --raw < "
+        command = ("mariadb --protocol=socket -u root --batch --skip-column-names --raw < "
                    + shlex.quote(str(sql_path)))
         result = subprocess.run(
             ["su", "-c", command],
@@ -59,7 +82,9 @@ def _root_sql(sql: str, *, read_only: bool = False) -> str:
             text=True, check=False,
         )
         if result.returncode != 0:
-            raise RuntimeError("Linux root authentication or MariaDB administrator "
+            if read_only:
+                diagnose_mariadb_root_socket()
+            raise RuntimeError("Linux root authentication or MariaDB administrator 
                                "query failed. See terminal output; no automatic retry.")
         return result.stdout.strip()
 
