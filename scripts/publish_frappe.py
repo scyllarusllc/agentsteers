@@ -182,9 +182,15 @@ def main() -> int:
     link = bench / "apps" / APP
     require(not link.exists() or link.resolve() == APP_SRC.resolve(),
             "Conflicting app directory; refusing to replace existing installation.")
-    bench_cli = str(bench / "env" / "bin" / "bench")
-    if not Path(bench_cli).is_file():
-        bench_cli = shutil.which("bench") or ""
+    # A first-time publish may have installed Bench CLI in the repository's
+    # isolated virtual environment; keep using it after setup completes.
+    bench_candidates = (
+        bench / "env" / "bin" / "bench",
+        ROOT / ".bench-cli-venv" / "bin" / "bench",
+    )
+    bench_cli = next((str(p) for p in bench_candidates if p.is_file()), None)
+    if not bench_cli:
+        bench_cli = shutil.which("bench")
     require(bool(bench_cli), "Bench CLI not found.")
 
     # Verify site and database are accessible BEFORE attempting changes.
