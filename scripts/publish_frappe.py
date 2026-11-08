@@ -14,6 +14,8 @@ import time
 import urllib.request
 import urllib.error
 
+from yarn_environment import ensure_yarn
+
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "frappe_app"
 APP = "agentsteers_frappe"
@@ -152,6 +154,8 @@ def main() -> int:
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
     commit = verify_git_release()
+    if "--check" not in sys.argv:
+        ensure_yarn()
     try:
         bench = resolve_bench(site)
     except RuntimeError as exc:
