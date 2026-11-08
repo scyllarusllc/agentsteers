@@ -68,7 +68,7 @@ def _root_sql(sql: str, *, read_only: bool = False) -> str:
     raise RuntimeError("Linux root authentication attempts exhausted.")
 
 
-def repair_missing_site_account(bench: Path, site: str) -> bool:
+def repair_missing_site_account(bench: Path, site: str, *, inspect_only: bool = False) -> bool:
     """Return True only when a missing account was created and granted access."""
     if site != "agentsteers.com" or not sys.stdin.isatty():
         return False
@@ -118,6 +118,9 @@ def repair_missing_site_account(bench: Path, site: str) -> bool:
         return False
 
     print("The site's database exists but its configured MariaDB account is MISSING.", flush=True)
+    if inspect_only:
+        print("Read-only inspection complete; no account will be created.", flush=True)
+        return False
     approval = input("Type CREATE MISSING DB USER to create only that user and grant "
                      "access to the existing site database: ").strip()
     if approval != "CREATE MISSING DB USER":
