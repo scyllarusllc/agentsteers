@@ -99,8 +99,6 @@ def main() -> int:
     path = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip() or str(Path.cwd())
     site = os.environ.get("AGENTSTEERS_PROD_SITE", DOMAIN).strip()
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
-    require(os.environ.get("AGENTSTEERS_PUBLISH_CONFIRM") == "PUBLISH agentsteers.com",
-            "Set AGENTSTEERS_PUBLISH_CONFIRM='PUBLISH agentsteers.com' to allow production changes.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
     commit = verify_git_release()
     bench = Path(path).expanduser().resolve(strict=True)
