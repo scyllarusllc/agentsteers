@@ -116,6 +116,23 @@ def main() -> None:
         print(f"Creating {SITE}. Frappe will securely prompt for database and Administrator passwords.", flush=True)
         run(cli, "new-site", SITE, cwd=BENCH)
 
+    else:
+        # A site_config.json may survive a failed bench new-site. Do not
+        # mistake its presence for a fully initialized MariaDB database.
+        probe = subprocess.run(
+            [cli, "--site", SITE, "list-apps"], cwd=BENCH,
+            text=True, capture_output=True, check=False,
+        )
+        if probe.returncode != 0:
+            abort(
+                "Existing site configuration could not be validated. "
+                "A partial first-time installation is possible. "
+                "Do not run bench new-site --force or delete site files: "
+                "inspect database existence, backups, and the site directory "
+                "before explicitly rebuilding an empty site. "
+                "Original Bench error: " + (probe.stderr or "").strip()[-1200:]
+            )
+
     listed = subprocess.run([cli, "--site", SITE, "list-apps"], cwd=BENCH,
                             text=True, check=True, capture_output=True).stdout
     installed = {row.split()[0] for row in listed.splitlines() if row.strip()}
