@@ -1,5 +1,27 @@
 # AgentSteers
 
+> **Architecture update — 2026-11-09 (implementation in progress):** AgentSteers is a **bring-your-own-Codex** platform. Each user connects a Codex CLI running on their own CentOS, Mac, or Windows device. The AgentSteers website and a ChatGPT-facing MCP endpoint are **two clients of the same authenticated task service**. Neither entry point executes Codex on the AgentSteers web host. The original same-host design described further below is historical and superseded by this section; it is not a deployed capability.
+
+## Bring-your-own-Codex MVP — current direction
+
+```text
+AgentSteers website ───────┐
+                           ├─> authenticated task API / queue ─> user-bound connector ─> local Codex CLI
+ChatGPT MCP + OAuth ───────┘                                (outbound encrypted channel)
+```
+
+- **Identity:** one user account owns zero or more registered devices; device credentials and task permissions are scoped to that owner. ChatGPT MCP requests must use validated OAuth access tokens, not a shared development bearer token.
+- **Single task contract:** both entry points create, inspect, retrieve results for, and cancel the same jobs. Every operation checks owner identity and device ownership.
+- **Connector:** runs as an unprivileged user on the user's machine, initiates an outbound TLS connection (no inbound public port), executes only within explicitly enrolled project roots, and never accepts arbitrary shell commands.
+- **Codex adapter:** invokes the installed Codex CLI with bounded runtime and output, explicit working directory, and non-interactive, least-privilege sandbox settings. No default production deployment, privileged shell, or unattended dangerous approvals.
+- **Lifecycle:** queued → claimed → running → succeeded/failed/cancelled; claim leases, idempotency, cancellation and redacted audit events are required before production use.
+- **First acceptance test:** from both the website and ChatGPT MCP, submit tasks for the *same* enrolled CentOS device and observe identical ownership-protected status and results. Later extend to Mac/Windows.
+
+**Implementation status:** this branch introduces a local, dependency-free **task contract and in-memory test prototype** only. It does not yet enroll real devices, authenticate OAuth clients, run Codex, persist jobs, or establish a secure connector channel. Do not expose the prototype on the Internet or deploy it to production. Existing `make mcp-dev` remains a separate mock service; `make dev` behavior may differ on PR #19 and must not be conflated with this MVP.
+
+**Release gates:** authenticated website and MCP adapters, durable multi-tenant queue, connector enrollment and credential rotation, outbound transport with replay protection, per-project authorization, secure Codex sandbox, cancellation and audit tests, and a real CentOS end-to-end demonstration. The separate Frappe development PR #19 remains unmerged pending isolation review.
+
+
 **AgentSteers turns ChatGPT Voice Mode on an iPad into a voice control interface for Codex CLI on the owner's cloud server.** The user speaks to ChatGPT, the authorized AgentSteers Plugin relays the task to AgentSteers running on the cloud server, and AgentSteers controls Codex CLI installed **on that same server**. Task progress and results flow back through the Plugin to ChatGPT Voice. AgentSteers is the secure bridge, not another chat assistant.
 
 > **Status (2026-11-08):** The end-to-end Voice Mode → integration → server Codex loop is **not yet implemented or verified**. Local mock-worker experiments do not provide live remote execution.
