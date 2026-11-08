@@ -6,6 +6,7 @@ Never installs packages, changes credentials, enables a service, or edits data.
 from __future__ import annotations
 
 import json
+import getpass
 from pathlib import Path
 import shutil
 import socket
@@ -59,6 +60,42 @@ def _show_start_failure_diagnostics() -> None:
           "sudo journalctl -u mariadb -n 50 --no-pager", flush=True)
 
 
+
+def _authorize_mariadb_start(systemctl: str) -> None:
+    """One-time root-password authorization via su's native TTY prompt."""
+    if getpass.getuser() != "frappe":
+        raise RuntimeError("Automatic sudoers setup is restricted to the frappe account.")
+    if systemctl not in ("/usr/bin/systemctl", "/bin/systemctl"):
+        raise RuntimeError(f"Unexpected systemctl location: {systemctl}")
+    if not shutil.which("su"):
+        raise RuntimeError("su is unavailable; ask the server administrator to configure sudoers.")
+    print("The frappe account cannot start MariaDB with sudo.", flush=True)
+    print("One-time setup can add a sudoers rule allowing ONLY MariaDB service start.", flush=True)
+    print("The system 'su' command will ask for the root password directly; "
+          "the deployment script does not collect or store it.", flush=True)
+    answer = input("Type AUTHORIZE FRAPPE to configure that rule: ").strip()
+    if answer != "AUTHORIZE FRAPPE":
+        raise RuntimeError("Root authorization was not approved; deployment stopped.")
+    # Run only a fixed, tightly scoped root command. No project script or
+    # user-provided strings are executed as root, and visudo validates syntax.
+    rule = f"frappe ALL=(root) NOPASSWD: {systemctl} start mariadb.service"
+    command = (
+        "set -eu; "
+        "tmp=$(mktemp /etc/sudoers.d/.agentsteers-mariadb.XXXXXX); "
+        'trap \'rm -f "$tmp"\' EXIT; '
+        f"printf '%s\\n' '{rule}' > \\"$tmp\\"; "
+        'chmod 0440 "$tmp"; '
+        'visudo -cf "$tmp"; '
+        'mv -f "$tmp" /etc/sudoers.d/agentsteers-mariadb'
+    )
+    result = subprocess.run(["su", "-c", command], check=False)
+    if result.returncode:
+        raise RuntimeError("Root authentication or sudoers validation failed; "
+                           "no MariaDB privileges were granted.")
+    print("Installed restricted sudoers entry for frappe.", flush=True)
+
+
+
 def ensure_mariadb(bench: Path | None = None, site: str = "agentsteers.com",
                    *, check_only: bool = False) -> None:
     """Check TCP MariaDB reachability; offer local service start with consent."""
@@ -91,15 +128,20 @@ def ensure_mariadb(bench: Path | None = None, site: str = "agentsteers.com",
 
     if not sys.stdin.isatty():
         raise RuntimeError(failure + " Interactive terminal required before starting a system service.")
-    print("Existing MariaDB service appears stopped. This may require your sudo password.", flush=True)
-    answer = input("Type START MARIADB to run 'sudo systemctl start mariadb': ").strip()
+    systemctl = shutil.which("systemctl")
+    if not systemctl or not shutil.which("sudo"):
+        raise RuntimeError("systemctl or sudo unavailable; ask your server administrator.")
+    answer = input("Type START MARIADB to attempt service start: ").strip()
     if answer != "START MARIADB":
         raise RuntimeError("MariaDB start was not authorized; deployment stopped.")
 
-    if not shutil.which("sudo"):
-        raise RuntimeError("sudo unavailable; start mariadb.service through your administrator.")
+    permission = subprocess.run(
+        ["sudo", "-n", "-l", systemctl, "start", "mariadb.service"],
+        capture_output=True, text=True)
+    if permission.returncode:
+        _authorize_mariadb_start(systemctl)
     try:
-        subprocess.run(["sudo", "systemctl", "start", "mariadb"], check=True)
+        subprocess.run(["sudo", "-n", systemctl, "start", "mariadb.service"], check=True)
     except subprocess.CalledProcessError as exc:
         print("MariaDB start failed; collecting read-only service diagnostics.", flush=True)
         _show_start_failure_diagnostics()
