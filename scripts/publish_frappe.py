@@ -17,6 +17,7 @@ import urllib.request
 import urllib.error
 
 from yarn_environment import ensure_yarn
+from bench_redis import ensure_bench_redis
 from initialize_fresh_site import initialize_fresh_site
 from mariadb_environment import ensure_mariadb
 
@@ -357,6 +358,7 @@ def main() -> int:
         run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
 
     if "--check" in sys.argv:
+        ensure_bench_redis(bench)
         print(f"Publish preflight passed for {DOMAIN} at {commit}. No backups, migrations, or restarts executed.", flush=True)
         return 0
 
@@ -364,6 +366,7 @@ def main() -> int:
     print("Production target validated. Taking site backup before any changes...", flush=True)
     run([bench_cli, "--site", site, "backup", "--with-files"], cwd=bench)
 
+    ensure_bench_redis(bench, start=True)
     ensure_yarn()
     if not link.exists():
         link.symlink_to(APP_SRC, target_is_directory=True)

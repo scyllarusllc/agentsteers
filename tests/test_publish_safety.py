@@ -29,7 +29,7 @@ class PublishSafetyTests(unittest.TestCase):
             p = patch.object(publish, name, value); p.start(); self.addCleanup(p.stop)
         for name in ['verify_git_release', 'resolve_bench', 'ensure_apps_manifest',
                      'ensure_mariadb', 'diagnose_site_database_config', 'confirm_release',
-                     'ensure_yarn', 'run', 'health_check', 'initialize_fresh_site']:
+                     'ensure_yarn', 'run', 'health_check', 'initialize_fresh_site', 'ensure_bench_redis']:
             p = patch.object(publish, name); mock = p.start(); self.addCleanup(p.stop)
             setattr(self, name, mock)
         self.resolve_bench.return_value = self.bench

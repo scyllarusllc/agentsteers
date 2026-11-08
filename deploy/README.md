@@ -66,3 +66,13 @@ full backup, and follows the normal deployment steps. A completely absent Bench
 still requires `make setup`; this recovery handles the existing partial site.
 
 This publishes `agentsteers.com`; it does not publish MCP, edit Caddy, or run Codex.
+
+Before installing/migrating the app, publish verifies the dedicated Bench's Redis
+cache and queue dependencies. After deployment confirmation and backup, missing
+managed instances are started as the Bench owner on loopback ports configured in
+this Bench (currently 13000 and 11000). Existing processes must report this exact
+Bench configuration and match the Bench owner; conflicting services are never
+stopped or replaced. Logs are in `frappe-bench/logs/redis_cache.log` and
+`redis_queue.log`. These daemonized processes do not install boot-time services;
+a production process manager is still required for reboot recovery and the web,
+worker, scheduler and Socket.IO processes. Redis for other applications is untouched.
