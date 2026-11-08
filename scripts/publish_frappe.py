@@ -29,6 +29,32 @@ def require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def diagnose_database_accounts() -> None:
+    """Optional read-only MariaDB account list after Frappe error 1045."""
+    if not sys.stdin.isatty() or not shutil.which("su"):
+        print("Account check requires an interactive root session (su).",
+              file=sys.stderr, flush=True)
+        return
+    print("MariaDB account inspection is available. It will run 'SELECT User, Host "
+          "FROM mysql.user' under root, without changing database users.",
+          file=sys.stderr, flush=True)
+    answer = input("Type CHECK DB USERS to inspect database accounts, or press Enter to skip: ").strip()
+    if answer != "CHECK DB USERS":
+        print("Skipped MariaDB account inspection.", file=sys.stderr, flush=True)
+        return
+    # su asks for the root password through the terminal. Never read or store it.
+    # Fixed command: no shell input from the site configuration or error message.
+    query = "mariadb --batch -e 'SELECT User, Host FROM mysql.user;'"
+    result = subprocess.run(["su", "-c", query], check=False)
+    if result.returncode:
+        print("Could not inspect MariaDB accounts. Root password login may be "
+              "disabled or the MariaDB administrator account may require different "
+              "authentication.", file=sys.stderr, flush=True)
+    else:
+        print("MariaDB account list completed. This does not verify the Frappe "
+              "password or grants.", file=sys.stderr, flush=True)
+
+
 def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
     print("+ " + " ".join(args), flush=True)
     if capture:
@@ -46,6 +72,8 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
                 print("A database administrator must reconcile the account and site configuration "
                       "before publishing; do not reset the MariaDB root password or delete the site.",
                       file=sys.stderr, flush=True)
+                if "--check" not in sys.argv:
+                    diagnose_database_accounts()
             elif details:
                 print(details, file=sys.stderr, flush=True)
             raise RuntimeError(
