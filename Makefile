@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help install frappe-install frappe-dev-auto dev publish test pull git-pull-force
+.PHONY: help install frappe-install frappe-dev-auto dev publish publish-check test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Back up and deploy website to dedicated production Frappe Bench' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Back up and deploy website to dedicated production Frappe Bench' 'make publish-check    Validate production publish prerequisites without changes' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 install:
 	@command -v $(PYTHON) >/dev/null 2>&1 || { echo 'Python 3.11 not found. On CentOS Stream 9 run: sudo dnf install python3.11 python3.11-pip' >&2; exit 1; }
@@ -34,6 +34,9 @@ dev: install frappe-dev-auto
 
 publish:
 	@$(PYTHON) $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/scripts/publish_frappe.py
+
+publish-check:
+	@$(PYTHON) $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/scripts/publish_frappe.py --check
 
 test: install
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -v
