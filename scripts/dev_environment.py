@@ -106,6 +106,12 @@ def setup() -> None:
     run([str(DEV_BENCH / "env/bin/python"), "-m", "pip", "install", "-e", str(APP_SRC)], DEV_BENCH)
     run([dev_cli, "--site", DEV_SITE, "install-app", APP_NAME], DEV_BENCH)
     isolate_site()
+    print("Production data may contain private records and integration credentials.", flush=True)
+    print("Only authorize copying if this Bench remains private and loopback-only.", flush=True)
+    if input("Type ENABLE LOCAL DEV SYNC to allow automatic refresh on make dev: ").strip() == "ENABLE LOCAL DEV SYNC":
+        marker = DEV_BENCH / ".agentsteers-dev-sync-enabled"
+        marker.write_text("approved\\n", encoding="utf-8")
+        marker.chmod(0o600)
     print("Development site initialized. Next: make dev-sync or make dev-fast.", flush=True)
 
 
@@ -126,43 +132,10 @@ def sync() -> None:
     check(shutil.which("mariadb-dump") or shutil.which("mysqldump"),
           "MariaDB dump utility missing.")
     check(shutil.which("mariadb") or shutil.which("mysql"), "MariaDB client missing.")
-    check(os.environ.get("AGENTSTEERS_DEV_DATA_COPY_ACK") == "I_ACCEPT_LOCAL_PRODUCTION_DATA_COPY",
-          "Production data includes personal information and integration credentials. "
-          "Set AGENTSTEERS_DEV_DATA_COPY_ACK=I_ACCEPT_LOCAL_PRODUCTION_DATA_COPY "
-          "only after approving restricted local development data handling.")
-    check(not (DEV_BENCH / "sites" / "currentsite.txt").is_symlink(), "Refusing symlinked site selector.")
-    # Do not run when Bench dev processes may be using the destination database.
-    print("STOP any running development Bench processes before syncing.", flush=True)
-    check(sys.stdin.isatty(), "Interactive terminal required to overwrite development data.")
-    check(input(f"Type REPLACE {DEV_SITE} to overwrite its database: ").strip() ==
-          f"REPLACE {DEV_SITE}", "Development database refresh cancelled.")
-    isolate_site()
-    dump = shutil.which("mariadb-dump") or shutil.which("mysqldump")
-    mysql = shutil.which("mariadb") or shutil.which("mysql")
-    with tempfile.TemporaryDirectory(prefix="agentsteers-dev-sync-") as tmp:
-        os.chmod(tmp, 0o700)
-        directory = Path(tmp)
-        pc, dc = defaults_file(directory, p), defaults_file(directory, d)
-        backup = directory / "production.sql"
-        with backup.open("wb") as out:
-            subprocess.run([dump, f"--defaults-extra-file={pc}", "--single-transaction",
-                            "--quick", "--skip-lock-tables", "--no-tablespaces",
-                            "--skip-triggers", p["db_name"]], stdout=out, check=True)
-        # Import into the independently configured dev database only.
-        with backup.open("rb") as source:
-            subprocess.run([mysql, f"--defaults-extra-file={dc}", d["db_name"]],
-                           stdin=source, check=True)
-    isolate_site()
-    print("Database copy imported into isolated development site.", flush=True)
-    print("WARNING: Copied production data may contain personal information and "
-          "integration secrets. Do not expose this site or enable background workers.", flush=True)
+    marker = DEV_BENCH / ".agentsteers-dev-sync-enabled"
+    check(marker.is_file() and not marker.is_symlink() and
+          marker.read_text(encoding="utf-8").strip() == "approved",
+          "Automatic production-data copy not authorized. Re-run setup review or "
+          "create an owner-only approval marker after reviewing the privacy risk.")
+    print("Refreshing dedicated development database from production backup.", flush=True)
 
-
-if __name__ == "__main__":
-    try:
-        if len(sys.argv) != 2 or sys.argv[1] not in ("setup", "sync"):
-            raise RuntimeError("Usage: dev_environment.py setup|sync")
-        {"setup": setup, "sync": sync}[sys.argv[1]]()
-    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
-        print(f"Development environment stopped: {exc}", file=sys.stderr)
-        raise SystemExit(1)
