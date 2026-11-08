@@ -291,10 +291,12 @@ def offer_fresh_site_recovery(bench: Path, site: str, bench_cli: str) -> bool:
           "Linux root authentication may be requested.", flush=True)
     result = _root_sql(
         "SELECT COUNT(*) FROM information_schema.SCHEMATA "
-        f"WHERE SCHEMA_NAME={_literal(db_name)};\\n", read_only=True
+        f"WHERE SCHEMA_NAME={_literal(db_name)};\n", read_only=True
     ).strip()
-    if result != "0":
-        print("Recovery refused: database exists or the inspection was inconclusive.",
+    if result not in ("0", "1"):
+        raise RuntimeError("Database existence query returned an unexpected result; recovery refused.")
+    if result == "1":
+        print("Recovery refused: configured database exists; no initialization attempted.",
               flush=True)
         return False
     print("The configured database is absent. This may be an incomplete first-time "
