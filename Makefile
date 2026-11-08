@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help setup install frappe-install frappe-dev-auto dev publish test pull git-pull-force
+.PHONY: help setup install frappe-install frappe-dev-auto dev mcp-dev publish test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-detect local Frappe Bench; start mock MCP' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Serve dedicated Frappe development site on localhost' 'make mcp-dev          Start the previous local mock MCP service' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py
@@ -23,16 +23,19 @@ frappe-install:
 frappe-dev-auto:
 	@$(PYTHON) scripts/install_frappe_dev.py
 
-dev: install frappe-dev-auto
+dev:
+	@$(PYTHON) scripts/run_frappe_dev.py
+
+mcp-dev: install frappe-dev-auto
 	@set -eu; \
 	token="$${AGENTSTEERS_DEV_TOKEN:-}"; \
 	if [ -z "$$token" ]; then \
 		token="$$( $(VENV_PYTHON) -c 'import secrets; print(secrets.token_urlsafe(48))' )"; \
-		printf '%s\n' 'Generated an ephemeral local development token (not printed).'; \
+		printf '%s\\n' 'Generated an ephemeral local development token (not printed).'; \
 	fi; \
 	export AGENTSTEERS_DEV_TOKEN="$$token"; \
 	$(VENV_PYTHON) scripts/restart_dev_port.py; \
-	printf '%s\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
+	printf '%s\\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
 	exec $(VENV_PYTHON) -m agentsteers.http_server
 
 publish:
