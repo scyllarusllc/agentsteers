@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="AgentSteers: an open-source experiment in voice-first control of self-hosted coding agents.">
+<meta name="theme-color" content="#101725">
+<title>AgentSteers — Speak. Steer. Ship.</title>
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<header class="site-header wrap">
+<a class="brand" href="/" aria-label="AgentSteers home"><span class="brand-icon">A↗</span> AgentSteers</a>
+<nav aria-label="Main"><a href="#how">How it works</a><a href="#why">Why AgentSteers</a><a href="https://github.com/scyllarusllc/agentsteers">GitHub ↗</a></nav>
+</header>
+<main id="main">
+<section class="hero wrap">
+<p class="eyebrow"><span class="status-dot"></span> OPEN SOURCE · IN DEVELOPMENT</p>
+<h1>Speak your intent.<br><em>Steer your code.</em></h1>
+<p class="lead">A voice-first bridge between ChatGPT on your iPad and Codex CLI on your own server. Guide coding work through conversation, with infrastructure and permissions under your control.</p>
+<div class="actions"><a class="button primary" href="https://github.com/scyllarusllc/agentsteers">Explore on GitHub ↗</a><a class="button secondary" href="#how">See the concept ↓</a></div>
+<p class="note"><strong>Prototype status:</strong> End-to-end iPad Voice → plugin → self-hosted Codex CLI is not yet demonstrated. Public access does not mean that OAuth or execution safety is ready.</p>
+</section>
+<section class="band" id="how"><div class="wrap"><p class="kicker">THE FLOW</p><h2>From a conversation<br>to a controlled coding task.</h2><p class="section-lead">One secure entry point, one owner-managed server, and an explicit boundary before any task is run.</p>
+<div class="flow" aria-label="Planned architecture">
+<div class="step"><small>01 · TALK</small><strong>iPad / ChatGPT Voice</strong><span>Describe the development task naturally.</span></div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="step"><small>02 · AUTHORIZE</small><strong>AgentSteers MCP</strong><span>Authenticate, check scopes and repository access.</span></div>
+<div class="arrow" aria-hidden="true">→</div>
+<div class="step"><small>03 · EXECUTE</small><strong>Your server / Codex CLI</strong><span>Run approved work and return sanitized results.</span></div></div>
+<p class="footnote">Planned architecture only. ChatGPT Voice tool support, Google OAuth, remote MCP integration, and live Codex execution require implementation and validation.</p></div></section>
+<section class="wrap features" id="why"><p class="kicker">WHY BUILD IT?</p><h2>Built around the way<br>you want to work.</h2><div class="grid">
+<article><span class="icon">⌁</span><h3>Voice first</h3><p>Steer coding tasks without navigating a remote terminal or desktop.</p></article>
+<article><span class="icon">▣</span><h3>Self-hosted</h3><p>Keep the coding workspace and Codex CLI on infrastructure you control.</p></article>
+<article><span class="icon">◇</span><h3>Permission scoped</h3><p>Design around verified identities, allowlisted repositories, and auditable work.</p></article>
+</div></section>
+<section class="closing band"><div class="wrap"><p class="kicker">START WITH THE SOURCE</p><h2>Help shape the first release.</h2><p>AgentSteers is an early-stage open-source project. Review the code, architecture and current limitations on GitHub.</p><a class="button primary" href="https://github.com/scyllarusllc/agentsteers">View the repository ↗</a></div></section>
+</main>
+<footer class="wrap footer"><span>© AgentSteers · Open-source prototype</span><div><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="https://github.com/scyllarusllc/agentsteers">GitHub</a></div></footer>
+</body></html>
