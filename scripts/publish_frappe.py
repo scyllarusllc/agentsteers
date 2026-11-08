@@ -97,8 +97,8 @@ def health_check(commit: str) -> None:
 
 def main() -> int:
     path = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip()
-    site = os.environ.get("AGENTSTEERS_PROD_SITE", "").strip()
-    require(bool(path and site), "Set AGENTSTEERS_PROD_BENCH_DIR and AGENTSTEERS_PROD_SITE.")
+    site = os.environ.get("AGENTSTEERS_PROD_SITE", DOMAIN).strip()
+    require(bool(path), "Set AGENTSTEERS_PROD_BENCH_DIR to the dedicated production Bench path.")
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.environ.get("AGENTSTEERS_PUBLISH_CONFIRM") == "PUBLISH agentsteers.com",
             "Set AGENTSTEERS_PUBLISH_CONFIRM='PUBLISH agentsteers.com' to allow production changes.")
