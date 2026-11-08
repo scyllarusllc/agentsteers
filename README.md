@@ -170,6 +170,25 @@ make dev
 
 **Safety:** This never modifies an arbitrary ERPNext/EZ Workbase/production site, never starts Frappe's web process, and never redirects `agentsteers.com`. Install and test a separate development Bench/site before switching public traffic. If Frappe is not yet installed, provision the Bench and dedicated development site separately first.
 
+### Publishing the Frappe website to production
+
+`make publish` deploys the **Frappe website application** to an **already provisioned, dedicated single-site Frappe production Bench**. It does not provision Frappe/MariaDB, configure DNS/Caddy/HTTPS, deploy MCP, or run Codex.
+
+Use the actual production Bench location; the path below is an example, not a default:
+
+```bash
+export AGENTSTEERS_PROD_BENCH_DIR="/srv/agentsteers-frappe-bench"
+export AGENTSTEERS_PROD_SITE="agentsteers.com"
+export AGENTSTEERS_PUBLISH_CONFIRM="PUBLISH agentsteers.com"
+make publish
+```
+
+The command deliberately requires these production-specific variables and a non-root Bench owner. It rejects a missing site, an unexpected site name, a shared multi-site Bench, or a conflicting existing app checkout. If all checks pass, it runs: **site backup with files → editable app installation → first-time `install-app` if needed → `migrate` → `build` → website cache clear → Bench restart**. Backups do not replace a tested restore plan; database migrations can need manual rollback.
+
+`make publish` uses the code currently checked out locally: it **does not run `git pull`**. Check the intended Git commit before publishing. Do not point the command at an ERPNext/EZ Workbase Bench or other existing production workloads. After the command succeeds, verify `/`, `/privacy`, `/terms` and the CSS URL on the **already routed** production Frappe site; the reverse-proxy/DNS switch must be separately configured and verified. Privacy and Terms are still draft content, so review them before a public launch.
+
+The local MCP mock service on port 8765 is **never** made public by this target. Codex CLI and privileged task execution remain disabled.
+
 Other commands:
 
 | Command | Behavior |
@@ -177,6 +196,7 @@ Other commands:
 | `make help` | Display available targets. |
 | `make install` | Verify/rebuild a Python 3.11+ `.venv`, repair missing pip if possible, and install development dependencies. |
 | `make frappe-install` | Require a detected local Bench and dedicated AgentSteers dev site; install or update the App, otherwise fail safely. |
+| `make publish` | Back up and update a configured, dedicated production Frappe site; never publish MCP/Codex. |
 | `make test` | Run the repository's Python unittest suite locally. |
 | `make pull` | Run `git pull --ff-only` on the current branch; refuse a divergent history. |
 | `make git-pull-force` | **Destructive**: on local `main` only, ask for exact `YES`, fetch `origin/main`, save a recovery ref and stash dirty tracked/untracked non-ignored changes, then `git reset --hard origin/main`. |
