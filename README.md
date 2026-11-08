@@ -241,3 +241,29 @@ The MCP `submit_task` tool then calls `agentsteers_frappe.api.create_task`, whic
 ### Publishing without re-entering the Frappe Bench path
 
 After updating the checkout (`git pull --ff-only`), run `make publish-check` and then `make publish` **from the AgentSteers repository**. The release script now automatically looks for a dedicated `agentsteers.com` Frappe Bench in the current directory, conventional neighboring directories, and your home directory. It refuses ambiguous matches and still validates that the Bench contains only the intended site. If your Bench is stored elsewhere, set `AGENTSTEERS_PROD_BENCH_DIR` once in your shell profile or pass it to the command. This does not install Frappe or deploy MCP/Codex.
+
+
+### Unified project-managed Frappe Bench layout
+
+AgentSteers now prefers an existing `frappe-bench/` directory **inside the Git checkout** as its deployment Bench. This makes `make publish-check` and `make publish` usable from the project root without an environment variable, once the Bench and dedicated site are initialized:
+
+```text
+agentsteers/                    # Git checkout
+  Makefile
+  frappe_app/                    # versioned Frappe app source
+  src/                           # versioned MCP adapter source
+  scripts/
+  frappe-bench/                  # local runtime, ignored by Git
+    apps/frappe/
+    apps/agentsteers_frappe -> ../../frappe_app/agentsteers_frappe
+    sites/agentsteers.com/
+    env/
+```
+
+**Setup is not automatic yet.** The project-managed Bench must be initialized using Frappe Bench tooling and a dedicated `agentsteers.com` site before publishing. Never move a production Bench into the checkout without checking ownership, service configuration, backups, and live routing; simply create the directory or rename the repository is not sufficient. `frappe-bench/` is ignored by Git to avoid committing secrets, databases, virtual environments or installed Frappe code. The publishing script's existing restrictions (clean main, exact remote commit, non-root owner, one-site Bench, backup, confirmation, HTTPS checks) still apply. A separately located existing Bench remains supported by `AGENTSTEERS_PROD_BENCH_DIR`. MCP and Codex execution are independent and are not started by publish.
+
+```bash
+git pull --ff-only
+make publish-check
+make publish
+```
