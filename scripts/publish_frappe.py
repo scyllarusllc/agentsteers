@@ -363,7 +363,7 @@ def main() -> int:
             "Bench configuration missing.")
     # Avoid restarts / schema changes to other applications in a shared Bench.
     sites_dir = bench / "sites"
-    archived_site_pattern = re.compile(r"^\\.agentsteers-incomplete-\\d{8}T\\d{6}Z$")
+    archived_site_pattern = re.compile(r"^\.agentsteers-incomplete-\d{8}T\d{6}Z$")
     sites = []
     archived_sites = []
     for p in sites_dir.iterdir():
