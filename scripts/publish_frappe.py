@@ -30,6 +30,27 @@ def require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def diagnose_mariadb_root_access() -> None:
+    """Read-only MariaDB administrator diagnostic after authentication failure."""
+    if not shutil.which("sudo") or not shutil.which("mariadb"):
+        print("Skipping MariaDB root diagnostic: sudo or mariadb client unavailable.",
+              file=sys.stderr, flush=True)
+        return
+    print("Checking local MariaDB administrator access without prompting for a password...",
+          file=sys.stderr, flush=True)
+    result = subprocess.run(
+        ["sudo", "-n", "mariadb", "-e", "SELECT CURRENT_USER(), VERSION();"],
+        text=True, capture_output=True, check=False,
+    )
+    if result.returncode == 0:
+        print("MariaDB administrator connection succeeded; Frappe credentials still "
+              "require separate verification.", file=sys.stderr, flush=True)
+    else:
+        print('MariaDB admin diagnostic unavailable or failed. Manually run: '
+              'sudo mariadb -e "SELECT CURRENT_USER(), VERSION();" ',
+              file=sys.stderr, flush=True)
+
+
 def diagnose_database_accounts() -> None:
     """Optional read-only MariaDB account list after Frappe error 1045."""
     if not sys.stdin.isatty() or not shutil.which("su"):
@@ -65,6 +86,7 @@ def run(args: list[str], *, cwd: Path, capture: bool = False) -> str:
             details = (result.stderr or result.stdout or "").strip()
             if re.search(r"Access denied for user .*using password:", details, re.I):
                 print("MariaDB rejected the Frappe site's database credentials (error 1045).", file=sys.stderr, flush=True)
+                diagnose_mariadb_root_access()
                 print("Frappe reads the database username from its site configuration; "
                       "you do NOT need to type or share it.", file=sys.stderr, flush=True)
                 print("This can mean a missing database account, mismatched password, "
