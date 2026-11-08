@@ -1,0 +1,13 @@
+# PRE-LAUNCH ONLY for mcp.agentsteers.com.
+# This deliberately DOES NOT proxy to the local MCP development server.
+# Caddy can obtain HTTPS certificates when DNS and firewall are correctly configured.
+# Keep this file until a separately reviewed OAuth-protected MCP resource server exists.
+mcp.agentsteers.com {
+    encode zstd gzip
+    header {
+        Cache-Control "no-store"
+        X-Content-Type-Options "nosniff"
+        Referrer-Policy "no-referrer"
+    }
+    respond "AgentSteers MCP endpoint not yet enabled" 503
+}
