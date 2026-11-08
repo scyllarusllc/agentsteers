@@ -1,8 +1,8 @@
 # AgentSteers
 
-AgentSteers is an experimental, open-source orchestration project for **authorized** AI-assisted software engineering tasks. Its proposed architecture includes a control service, a constrained worker, and audited execution of development tasks (potentially using Codex CLI) on an explicitly enrolled host.
+AgentSteers is a proposed bridge between **ChatGPT Voice Mode** and **Codex CLI running on the project owner's cloud server**. The user speaks naturally to ChatGPT; an authorized integration submits a scoped job to AgentSteers; AgentSteers dispatches it to an enrolled server worker; the worker invokes Codex CLI in a restricted workspace; and the job status/results return to ChatGPT for a spoken response. AgentSteers is not a standalone chat assistant.
 
-> **Status (2026-11-08):** Initial documentation only. No worker, control service, deployment, or remote execution has been verified or enabled.
+> **Status (2026-11-08):** The end-to-end Voice Mode → integration → server Codex loop is **not yet implemented or verified**. Local mock-worker experiments do not provide live remote execution.
 
 ## Proposed architecture
 
@@ -10,19 +10,24 @@ AgentSteers is an experimental, open-source orchestration project for **authoriz
 
 ```mermaid
 flowchart TD
-    A["1. Submit task"] --> B["2. Approve scope"]
-    B --> C["3. Safe Worker (mock only)"]
-    C --> D["4. Run tests"]
-    D --> E["5. GitHub Pull Request"]
+    U["User speaks in ChatGPT Voice Mode"] --> G["ChatGPT + authorized AgentSteers integration"]
+    G --> C["AgentSteers control service<br/>Authenticate, approve, queue"]
+    C --> W["Cloud server worker<br/>Restricted task execution"]
+    W --> X["Codex CLI<br/>Work on approved repository"]
+    X --> R["Job status, logs and results"]
+    R --> G
+    G --> U
 ```
 
-**Safety and review:** Approval and allowlists are required before execution. The worker is local mock-only at this stage. Audit logs record decisions and outcomes; code changes require review before merge. Remote Codex CLI, server access, and deployment are future integrations. EZ Workbase remains separate, with no production or real payroll access.
+**Scope and safety:** This is the intended architecture, not a working connection. ChatGPT Voice Mode needs a supported, explicitly connected tool/integration to invoke AgentSteers; voice conversation alone does not grant server access. Require scoped authorization, repository/action allowlists, isolated non-root execution, short-lived credentials, cancellation, and redacted audit logs. The worker must return status/errors/results so ChatGPT can explain them. Code changes can be committed/pushed under the owner's authorized workflow, while production deployment, secrets, and financial operations remain separately gated.
 
 ## Proposed components
 
-- **Control service:** authenticate users, accept scoped tasks, and require explicit authorization before execution.
-- **Worker:** poll for approved work, enforce an allowlist of repositories and commands, and run with least privilege in an isolated environment.
-- **Review flow:** capture logs and test results; propose code changes through pull requests for human review rather than pushing directly to production.
+- **ChatGPT Voice Mode + integration:** voice is the user interface; the connected tool translates a permitted conversation request into an authenticated AgentSteers API call.
+- **Control service:** authenticate the caller, check scope/approval, queue tasks, and expose job status and results.
+- **Server worker:** run on the owner's enrolled cloud host, accept approved jobs only, and invoke Codex CLI with limited privileges in an isolated repository workspace.
+- **Feedback loop:** return task output, test summaries, errors, and progress to the integration for ChatGPT to report in conversation.
+- **GitHub (optional workflow output):** Codex-produced code changes may result in commits/PRs; GitHub is not the primary control path.
 
 ## Security principles
 
@@ -36,12 +41,13 @@ flowchart TD
 
 ## Initial milestones
 
-- [x] Add project overview and guardrails.
-- [ ] Define threat model, authorization policy, and task schema.
-- [ ] Implement a local-only, dry-run worker with mocked tasks and tests.
-- [ ] Add authenticated task transport and immutable audit events.
-- [ ] Demonstrate a sandboxed repository task with a reviewable pull request.
-- [ ] Perform security review before any remote server integration.
+- [x] Document the intended voice-to-Codex architecture and security boundaries.
+- [ ] Define the ChatGPT integration interface and supported invocation mechanism.
+- [ ] Specify authenticated task submission, status polling, cancellation and result schemas.
+- [ ] Validate local dry-run worker behavior and tests.
+- [ ] Implement an isolated server worker with a controlled Codex CLI adapter.
+- [ ] Demonstrate end-to-end voice request → approved task → Codex → spoken outcome in a test environment.
+- [ ] Complete security review before production server access.
 
 ## Relationship to EZ Workbase
 
@@ -49,4 +55,4 @@ EZ Workbase is a separate Frappe-based business application. AgentSteers may eve
 
 ## Development
 
-No installation or runtime commands are provided yet. The first implementation should be local-only and use mock tasks, without connecting to a real server.
+Do not treat the mock worker as proof of a working cloud bridge. Develop and test the API contract and permission model locally before enrolling a server or allowing real Codex execution.
