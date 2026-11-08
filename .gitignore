@@ -12,3 +12,6 @@ dist/
 
 # Isolated CLI virtual environment used by first-time make publish
 /.bench-cli-venv/
+
+# Local Yarn Classic binary used when system yarn is not executable
+/.node-tools/
