@@ -6,3 +6,6 @@ __pycache__/
 build/
 dist/
 .venv.backup.*/
+
+# Local managed Frappe Bench: databases, configs, secrets, installed apps and environments
+/frappe-bench/
