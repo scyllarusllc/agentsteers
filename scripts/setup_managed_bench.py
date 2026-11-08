@@ -93,12 +93,22 @@ def main() -> None:
     run(str(BENCH / "env" / "bin" / "python"), "-m", "pip", "install", "-e", str(SOURCE), cwd=BENCH)
 
     apps_txt = BENCH / "sites" / "apps.txt"
-    if not apps_txt.is_file():
-        abort("Missing Frappe sites/apps.txt")
-    apps = apps_txt.read_text().splitlines()
-    if APP not in apps:
-        with apps_txt.open("a") as stream:
-            stream.write(APP + "\n")
+    if apps_txt.is_symlink():
+        abort("Refusing symlinked sites/apps.txt.")
+    if not apps_txt.exists():
+        # Only repair this manifest once a real Bench and application exist.
+        apps_txt.write_text("frappe\n" + APP + "\n")
+        print("Created missing sites/apps.txt for the verified managed Bench.", flush=True)
+    elif not apps_txt.is_file():
+        abort("sites/apps.txt is not a regular file.")
+    else:
+        apps = apps_txt.read_text().splitlines()
+        missing = [name for name in ("frappe", APP) if name not in apps]
+        if missing:
+            with apps_txt.open("a") as stream:
+                if apps and apps[-1] != "":
+                    stream.write("\n")
+                stream.write("\n".join(missing) + "\n")
 
     if SITE not in sites:
         print(f"Creating {SITE}. Frappe will securely prompt for database and Administrator passwords.", flush=True)
