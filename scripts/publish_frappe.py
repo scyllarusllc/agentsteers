@@ -385,6 +385,27 @@ def main() -> int:
     restart_website_service(bench)
     health_check(commit)
     print("Frappe production site updated and HTTPS routes verified.", flush=True)
+    # Final, optional Google OAuth configuration step: never block a successful publish.
+    # --check is read-only and exits above, before this step.
+    print("Final step: checking Google login public URL configuration...", flush=True)
+    try:
+        from manage_google_login import configure
+        result = configure(bench, "check", bench_cli=bench_cli)
+        if result != 0:
+            print("Google login host_name differs from the public HTTPS URL.", flush=True)
+            print("Optional repair requires a separate explicit confirmation.", flush=True)
+            if sys.stdin.isatty():
+                choice = input("Offer Google login host_name repair now? [y/N]: ").strip().lower()
+                if choice == "y":
+                    configure(bench, "fix", bench_cli=bench_cli)
+                else:
+                    print("Google login repair skipped; published website unchanged.", flush=True)
+            else:
+                print("Non-interactive publish: skipping optional Google login repair.", flush=True)
+    except (OSError, ValueError, RuntimeError, subprocess.CalledProcessError) as exc:
+        print(f"WARNING: Optional Google login configuration step did not complete: {exc}",
+              file=sys.stderr, flush=True)
+        print("Website publication succeeded; inspect Google login separately.", flush=True)
     print("No Caddy/DNS changes, MCP publication or Codex execution was performed.", flush=True)
     return 0
 
