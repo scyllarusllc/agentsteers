@@ -9,3 +9,6 @@ dist/
 
 # Local managed Frappe Bench: databases, configs, secrets, installed apps and environments
 /frappe-bench/
+
+# Isolated CLI virtual environment used by first-time make publish
+/.bench-cli-venv/
