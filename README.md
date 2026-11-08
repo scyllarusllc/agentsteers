@@ -21,6 +21,24 @@ AgentSteers is designed for developers who want to issue development requests fr
 
 Mobile interfaces and remote development tools can already help people manage coding work away from their desks. AgentSteers is **not intended to replace those interfaces**. Its proposed differentiator is the combination of **ordinary ChatGPT voice conversation + private-plugin bridge + self-hosted Codex CLI**, with an auditable permission boundary. This distinction is a **product hypothesis**, not a proven competitive advantage or evidence of demand.
 
+### Why build this instead of only using official Codex tools?
+
+**Official capabilities we acknowledge:** OpenAI's Codex Remote lets people start, steer, review, and approve tasks on connected development machines from the ChatGPT mobile app. Its secure relay can keep those machines reachable without exposing them directly to the public Internet. OpenAI also supports voice-driven coordination with Codex in supported desktop experiences. AgentSteers does **not** claim to have invented remote Codex access, approvals, secure relay, or mobile task monitoring.
+
+**Our narrower hypothesis:** Some developers want an **ordinary ChatGPT Voice conversation on an iPad** to be their primary interface to a **self-hosted Codex CLI** on a server they control, rather than navigating a dedicated Codex Remote UI. AgentSteers aims to provide an open-source, narrowly scoped, auditable bridge for that experience, with a stable `mcp.agentsteers.com` entry point, explicit repository permissions, and conversational task-status feedback. We are not claiming the official product cannot evolve to offer this experience.
+
+| Question | Official Codex experiences | AgentSteers target |
+| --- | --- | --- |
+| Remote Codex tasks from a mobile device? | Yes, through supported Codex Remote experiences. | Intended, but not yet working. |
+| Primary interaction | Official Codex mobile/desktop experiences and supported voice features. | Ordinary ChatGPT Voice conversation on iPad using an authorized plugin. |
+| Execution environment | Connected development machines and supported remote environments. | Owner-managed cloud host running AgentSteers and Codex CLI together. |
+| Integration model | Official OpenAI Codex ecosystem. | Open-source self-hosted MCP bridge with repo-scoped authorizations. |
+| Confirmed iPad Voice → plugin → own server → CLI round-trip? | Not claimed as a universal official workflow. | **Not yet verified**; this is the central prototype milestone. |
+
+**Why invest in it?** To test whether the voice-first, self-hosted workflow saves time and reduces friction for developers away from their keyboards. It is an experiment, not yet a validated user need. Success requires a real iPad end-to-end demo, security validation, and feedback from early users. If official tools already meet a person's needs, they may not need AgentSteers at all.
+
+Sources: [OpenAI — Work with Codex from anywhere](https://openai.com/index/work-with-codex-from-anywhere/), [OpenAI Developers — Mastering remote engineering work](https://developers.openai.com/blog/mastering-codex-remote-for-engineering), [ChatGPT Voice help](https://help.openai.com/en/articles/20001274-chatgpt-voice), [ChatGPT Work and Codex help](https://help.openai.com/en/articles/20001275-chatgpt-work-and-codex).
+
 ### Example (target experience, not yet implemented)
 
 > On an iPad: “AgentSteers, ask Codex to review the failing tests in EZ Workbase, fix the bug in a safe branch, and tell me what changed.”
