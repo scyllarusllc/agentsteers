@@ -1,0 +1,53 @@
+{
+  "module": "AgentSteers",
+  "name": "AgentSteers User Settings",
+  "doctype": "DocType",
+  "custom": 0,
+  "istable": 0,
+  "autoname": "field:owner_user",
+  "track_changes": 1,
+  "field_order": [
+    "owner_user",
+    "default_repository",
+    "voice_updates",
+    "notification_preference"
+  ],
+  "fields": [
+    {
+      "fieldname": "owner_user",
+      "fieldtype": "Link",
+      "label": "Owner User",
+      "options": "User",
+      "reqd": 1,
+      "unique": 1,
+      "in_list_view": 1
+    },
+    {
+      "fieldname": "default_repository",
+      "fieldtype": "Data",
+      "label": "Default Repository"
+    },
+    {
+      "fieldname": "voice_updates",
+      "fieldtype": "Check",
+      "label": "Prefer Voice Updates",
+      "default": "1"
+    },
+    {
+      "fieldname": "notification_preference",
+      "fieldtype": "Select",
+      "label": "Notifications",
+      "options": "Off\nFailures Only\nAll Task Updates",
+      "default": "Failures Only"
+    }
+  ],
+  "permissions": [
+    {
+      "role": "System Manager",
+      "read": 1,
+      "write": 1,
+      "create": 1,
+      "delete": 1
+    }
+  ]
+}
