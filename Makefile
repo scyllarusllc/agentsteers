@@ -4,17 +4,20 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help install dev test pull git-pull-force
+.PHONY: help install frappe-install dev test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Start loopback-only mock MCP development server' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Install Frappe app if configured, then start local mock MCP' 'make frappe-install   Install/update app on explicitly selected dev Frappe site' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 install:
 	@command -v $(PYTHON) >/dev/null 2>&1 || { echo 'Python 3.11 not found. On CentOS Stream 9 run: sudo dnf install python3.11 python3.11-pip' >&2; exit 1; }
 	@$(PYTHON) scripts/bootstrap_dev.py
 	$(VENV_PYTHON) -m pip install -e . 'mcp>=1.28,<2' 'uvicorn>=0.30,<1' 'PyJWT[crypto]>=2.9,<3'
 
-dev: install
+frappe-install:
+	@$(PYTHON) scripts/install_frappe_dev.py
+
+dev: install frappe-install
 	@set -eu; \
 	token="$${AGENTSTEERS_DEV_TOKEN:-}"; \
 	if [ -z "$$token" ]; then \
