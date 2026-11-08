@@ -15,3 +15,8 @@ dist/
 
 # Local Yarn Classic binary used when system yarn is not executable
 /.node-tools/
+
+# Local secrets and environment overrides
+.env
+.env.*
+!.env.example
