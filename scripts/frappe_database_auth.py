@@ -42,7 +42,7 @@ def _root_sql(sql: str, *, read_only: bool = False) -> str:
     command = "mariadb --batch --skip-column-names --raw"
     result = subprocess.run(
         ["su", "-c", command],
-        input="SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\\n".replace("\\\\n", "\\n") + sql,
+        input="SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\\n" + sql,
         text=True, stdout=subprocess.PIPE, stderr=None, check=False,
     )
     if result.returncode != 0:
