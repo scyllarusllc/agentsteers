@@ -10,31 +10,13 @@ AgentSteers is an experimental, open-source orchestration project for **authoriz
 
 ```mermaid
 flowchart TD
-    U["Project owner / developer"] --> C["AgentSteers control service<br/>Authenticate and validate task"]
-    C --> A{"Explicit task approval<br/>and scope check"}
-    A -- "Denied" --> X["Reject and record decision"]
-    A -- "Approved" --> Q["Scoped task queue"]
-    Q --> W["AgentSteers worker<br/>Least privilege, default deny"]
-    W --> G{"Allowlisted repository,<br/>operation and resource limits?"}
-    G -- "No" --> X
-    G -- "Yes" --> S["Isolated execution sandbox"]
-    S --> M["Local mock runner (first milestone)"]
-    S -. "Future, after security review" .-> CLI["Codex CLI on enrolled host"]
-    M --> T["Run tests and collect results"]
-    CLI --> T
-    T --> P["Propose GitHub pull request"]
-    P --> H{"Human code review"}
-    H -- "Approved" --> MERGE["Human-controlled merge"]
-    H -- "Changes requested" --> Q
-    C --> L[("Redacted audit events")]
-    A --> L
-    W --> L
-    T --> L
-    H --> L
-    MERGE -. "Separate authorized deployment only" .-> E["EZ Workbase development environment"]
+    A["1. Submit task"] --> B["2. Approve scope"]
+    B --> C["3. Safe Worker (mock only)"]
+    C --> D["4. Run tests"]
+    D --> E["5. GitHub Pull Request"]
 ```
 
-**Trust boundaries:** The control service does not grant unrestricted shell access. Workers can only process approved, scoped tasks in isolated environments. Codex CLI, remote hosts, merge, and deployment are future integrations, not automatic side effects. EZ Workbase remains a separate project; no production or real payroll access is included.
+**Safety and review:** Approval and allowlists are required before execution. The worker is local mock-only at this stage. Audit logs record decisions and outcomes; code changes require review before merge. Remote Codex CLI, server access, and deployment are future integrations. EZ Workbase remains separate, with no production or real payroll access.
 
 ## Proposed components
 
