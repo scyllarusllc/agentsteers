@@ -1,0 +1,19 @@
+[Unit]
+Description=AgentSteers Frappe website
+After=network.target mariadb.service
+
+[Service]
+Type=simple
+User=frappe
+Group=frappe
+WorkingDirectory=/home/frappe/github/agentsteers/frappe-bench/sites
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/frappe/github/agentsteers/frappe-bench/env/bin/gunicorn --pythonpath /home/frappe/github/agentsteers/deploy --bind 127.0.0.1:8010 --workers 2 --timeout 120 --access-logfile - --error-logfile - website_wsgi:application
+Restart=on-failure
+RestartSec=5
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

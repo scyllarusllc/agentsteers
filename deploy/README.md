@@ -76,3 +76,21 @@ stopped or replaced. Logs are in `frappe-bench/logs/redis_cache.log` and
 `redis_queue.log`. These daemonized processes do not install boot-time services;
 a production process manager is still required for reboot recovery and the web,
 worker, scheduler and Socket.IO processes. Redis for other applications is untouched.
+
+### Website runtime on the current server
+
+The dedicated system unit `agentsteers-web.service` runs Gunicorn as `frappe` on
+`127.0.0.1:8010`, using `deploy/website_wsgi.py` for Frappe and public asset serving.
+The reviewed unit template is `deploy/agentsteers-web.service`; its absolute paths
+must match the deployment checkout. `make publish` restarts this exact service,
+checks it is active, then verifies the public HTTPS page markers. It refuses to
+restart a unit for a different Bench. Non-root publishing requests Linux root
+authentication via `su` for that service restart; no general sudo rights are added.
+
+Caddy must route `agentsteers.com` to this loopback listener with
+`X-Frappe-Site-Name: agentsteers.com` and `X-Forwarded-Proto: https`. The current
+website route accepts GET/HEAD only for `/`, `/privacy`, `/terms` and
+`/assets/agentsteers_frappe/*`; other paths return 404. This does not publish the
+Frappe API, login, private files or MCP. Caddy configuration remains managed
+separately from `make publish`. The web service is enabled at boot, but its Redis
+dependencies still need persistent service management for full reboot recovery.

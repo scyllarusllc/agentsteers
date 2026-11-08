@@ -17,6 +17,7 @@ import urllib.request
 import urllib.error
 
 from yarn_environment import ensure_yarn
+from website_service import restart_website_service
 from bench_redis import ensure_bench_redis
 from initialize_fresh_site import initialize_fresh_site
 from mariadb_environment import ensure_mariadb
@@ -177,7 +178,7 @@ def health_check(commit: str) -> None:
         errors = []
         for path, signature in expected.items():
             try:
-                req = urllib.request.Request(base + path, headers={
+                req = urllib.request.Request(base + path + "?agentsteers-health=" + str(time.time_ns()), headers={
                     "User-Agent": "AgentSteers-Publish-Healthcheck/1.0",
                     "Cache-Control": "no-cache",
                 })
@@ -381,7 +382,7 @@ def main() -> int:
     run([bench_cli, "--site", site, "migrate"], cwd=bench)
     run([bench_cli, "build", "--app", APP], cwd=bench)
     run([bench_cli, "--site", site, "clear-website-cache"], cwd=bench)
-    run([bench_cli, "restart"], cwd=bench)
+    restart_website_service(bench)
     health_check(commit)
     print("Frappe production site updated and HTTPS routes verified.", flush=True)
     print("No Caddy/DNS changes, MCP publication or Codex execution was performed.", flush=True)
