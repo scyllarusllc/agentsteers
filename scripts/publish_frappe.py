@@ -146,6 +146,8 @@ def resolve_bench(site: str) -> Path:
 
 
 def main() -> int:
+    # Use the standard-library venv/pip path by default throughout publish.
+    os.environ.setdefault("BENCH_DISABLE_UV", "1")
     site = os.environ.get("AGENTSTEERS_PROD_SITE", DOMAIN).strip()
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
