@@ -21,7 +21,8 @@ dev: install
 		token="$$( $(VENV_PYTHON) -c 'import secrets; print(secrets.token_urlsafe(48))' )"; \
 		printf '%s\n' 'Generated an ephemeral local development token (not printed).'; \
 	fi; \
-	export AGENTSTEERS_DEV_TOKEN="$$token"; \
+	export AGENTSTEERS_DEV_TOKEN="$token"; \
+	$(VENV_PYTHON) scripts/restart_dev_port.py; \
 	printf '%s\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
 	exec $(VENV_PYTHON) -m agentsteers.http_server
 
