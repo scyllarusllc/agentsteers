@@ -178,7 +178,6 @@ The default production Bench path is your **current working directory** (`pwd`).
 
 ```bash
 cd /actual/production/frappe-bench
-export AGENTSTEERS_PUBLISH_CONFIRM="PUBLISH agentsteers.com"
 make -f /actual/agentsteers/Makefile publish
 ```
 
@@ -186,13 +185,12 @@ Alternatively, run it from the AgentSteers repository with the explicit override
 
 ```bash
 export AGENTSTEERS_PROD_BENCH_DIR="/actual/production/frappe-bench"
-export AGENTSTEERS_PUBLISH_CONFIRM="PUBLISH agentsteers.com"
 make publish
 ```
 
 The paths above are placeholders; use real server paths. Running plain `make publish` in the AgentSteers Git checkout without the override will refuse to deploy: a Git repository is not a Frappe Bench.
 
-The production site defaults to `agentsteers.com` (you may set `AGENTSTEERS_PROD_SITE` explicitly, but other site names are rejected). The command uses the current directory as its default Bench candidate and still requires release confirmation and a non-root Bench owner. It rejects a missing site, an unexpected site name, a shared multi-site Bench, or a conflicting existing app checkout. It first verifies the current Git branch is `main`, the tracked/untracked worktree is clean, and local HEAD exactly matches the current remote `origin/main` (read-only `git ls-remote`, **no automatic pull/reset**). It then requires an **interactive** `PUBLISH agentsteers.com` confirmation in addition to the environment-variable confirmation. Only after these checks does it run: **site backup with files → editable app installation → first-time `install-app` if needed → `migrate` → `build` → website cache clear → Bench restart → HTTPS route checks**. The HTTPS checks require the public `agentsteers.com` routes `/`, `/privacy`, `/terms` and the packaged CSS to serve the new Frappe version, not just any old static page. If existing Caddy/DNS still points to the legacy site, the post-deploy check will fail; change routing only in a separate, reviewed operation. The checks do not automatically undo migrations. Backups do not replace a tested restore plan; database migrations can need manual rollback.
+The production site defaults to `agentsteers.com` (you may set `AGENTSTEERS_PROD_SITE` explicitly, but other site names are rejected). The command uses the current directory as its default Bench candidate and requires a non-root Bench owner and interactive release confirmation. It rejects a missing site, an unexpected site name, a shared multi-site Bench, or a conflicting existing app checkout. It first verifies the current Git branch is `main`, the tracked/untracked worktree is clean, and local HEAD exactly matches the current remote `origin/main` (read-only `git ls-remote`, **no automatic pull/reset**). It then requires an **interactive** `PUBLISH agentsteers.com` confirmation; no confirmation environment variable is needed. Only after these checks does it run: **site backup with files → editable app installation → first-time `install-app` if needed → `migrate` → `build` → website cache clear → Bench restart → HTTPS route checks**. The HTTPS checks require the public `agentsteers.com` routes `/`, `/privacy`, `/terms` and the packaged CSS to serve the new Frappe version, not just any old static page. If existing Caddy/DNS still points to the legacy site, the post-deploy check will fail; change routing only in a separate, reviewed operation. The checks do not automatically undo migrations. Backups do not replace a tested restore plan; database migrations can need manual rollback.
 
 `make publish` uses the code currently checked out locally: it **does not run `git pull`**, and it refuses divergent branches or dirty worktrees. Check the intended Git commit before publishing. Do not point the command at an ERPNext/EZ Workbase Bench or other existing production workloads. After the command succeeds, verify `/`, `/privacy`, `/terms` and the CSS URL on the **already routed** production Frappe site; the reverse-proxy/DNS switch must be separately configured and verified. Privacy and Terms are still draft content, so review them before a public launch.
 
