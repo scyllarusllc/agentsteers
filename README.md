@@ -145,12 +145,32 @@ make dev
 
 Keep the token private and do not commit it. Stop the foreground server with Ctrl+C. This development server uses a single bearer-token guard, **not** the production OAuth identity and authorization flow. The underlying tools remain mock-only: `make dev` does not start Codex CLI, access a remote server, run real code-generation tasks, deploy anything, or move funds.
 
+### Automatic Frappe app installation (dedicated development site only)
+
+`make dev` automatically installs or updates the Frappe app **only after** you explicitly configure an existing, isolated development Bench/site. It will never create a site, guess a site name, or edit production reverse proxies.
+
+On your CentOS development host, configure the **actual** Bench path and dedicated test site name (examples below are placeholders):
+
+```bash
+export AGENTSTEERS_BENCH_DIR="/home/frappe/frappe-bench"
+export AGENTSTEERS_FRAPPE_SITE="agentsteers-dev.localhost"
+export AGENTSTEERS_FRAPPE_DEV_CONFIRM="$AGENTSTEERS_FRAPPE_SITE"
+make dev
+```
+
+Before running these commands, ensure `$AGENTSTEERS_BENCH_DIR/sites/$AGENTSTEERS_FRAPPE_SITE/site_config.json` exists and the Bench has a working `env/bin/python` and Frappe installation. The explicit confirmation variable prevents unintended installation when a site name is guessed. **Never point these variables at an ERPNext, EZ Workbase, or other production site.**
+
+The installer links this repository's `frappe_app/` to the selected Bench's `apps/agentsteers_frappe` (only if no conflicting path exists), installs it into the Bench's Python environment with `pip install -e`, checks installed apps, installs the app on the designated site if needed, runs `migrate`, builds assets, and clears that site's website cache. These steps alter the selected development site's schema and assets; run only on a dedicated development site with appropriate backups. `make frappe-install` performs just this installation/update without starting MCP.
+
+If the three environment variables are not set, `make dev` prints that Frappe installation is skipped and starts the existing loopback MCP mock server. No Frappe processes are started by `make dev`. Actual Frappe web serving requires running the dedicated Bench site separately, then verifying `/`, `/privacy`, and `/terms` locally. The public domain is **not** switched over.
+
 Other commands:
 
 | Command | Behavior |
 | --- | --- |
 | `make help` | Display available targets. |
 | `make install` | Verify/rebuild a Python 3.11+ `.venv`, repair missing pip if possible, and install development dependencies. |
+| `make frappe-install` | Install or update the app on an explicitly configured dedicated Frappe development site. |
 | `make test` | Run the repository's Python unittest suite locally. |
 | `make pull` | Run `git pull --ff-only` on the current branch; refuse a divergent history. |
 | `make git-pull-force` | **Destructive**: on local `main` only, ask for exact `YES`, fetch `origin/main`, save a recovery ref and stash dirty tracked/untracked non-ignored changes, then `git reset --hard origin/main`. |
