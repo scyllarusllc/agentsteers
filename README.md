@@ -260,10 +260,13 @@ agentsteers/                    # Git checkout
     env/
 ```
 
-**Setup is not automatic yet.** The project-managed Bench must be initialized using Frappe Bench tooling and a dedicated `agentsteers.com` site before publishing. Never move a production Bench into the checkout without checking ownership, service configuration, backups, and live routing; simply create the directory or rename the repository is not sufficient. `frappe-bench/` is ignored by Git to avoid committing secrets, databases, virtual environments or installed Frappe code. The publishing script's existing restrictions (clean main, exact remote commit, non-root owner, one-site Bench, backup, confirmation, HTTPS checks) still apply. A separately located existing Bench remains supported by `AGENTSTEERS_PROD_BENCH_DIR`. MCP and Codex execution are independent and are not started by publish.
+**First-time setup is integrated into `make publish`.** If no existing Bench is found, the publish command launches the interactive managed-Bench setup script, creates the dedicated `agentsteers.com` site, and then proceeds with the normal release checks. An existing valid Bench is reused; an ambiguous set of existing Benches still causes a safe failure. This requires installed Frappe Bench CLI and database prerequisites, and passwords are prompted interactively. Never move a production Bench into the checkout without checking ownership, service configuration, backups, and live routing; simply create the directory or rename the repository is not sufficient. `frappe-bench/` is ignored by Git to avoid committing secrets, databases, virtual environments or installed Frappe code. The publishing script's existing restrictions (clean main, exact remote commit, non-root owner, one-site Bench, backup, confirmation, HTTPS checks) still apply. A separately located existing Bench remains supported by `AGENTSTEERS_PROD_BENCH_DIR`. MCP and Codex execution are independent and are not started by publish.
 
 ```bash
 git pull --ff-only
 make publish-check
 make publish
 ```
+
+
+**First publish shortcut:** Run `git pull --ff-only && make publish` from the AgentSteers checkout. When no dedicated Bench exists, the command now runs first-time interactive setup before publishing. `make publish-check` remains read-only: it does not create a Bench and therefore cannot pass before initial setup. You can still run `make setup` separately for troubleshooting. This workflow has not yet been tested on the owner's CentOS server.
