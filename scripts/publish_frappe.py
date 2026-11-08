@@ -131,6 +131,10 @@ def main() -> int:
     # Verify site and database are accessible BEFORE attempting changes.
     run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
 
+    if "--check" in sys.argv:
+        print(f"Publish preflight passed for {DOMAIN} at {commit}. No backups, migrations, or restarts executed.", flush=True)
+        return 0
+
     confirm_release(commit)
     print("Production target validated. Taking site backup before any changes...", flush=True)
     run([bench_cli, "--site", site, "backup", "--with-files"], cwd=bench)
