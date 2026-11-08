@@ -47,7 +47,7 @@ def _root_sql(sql: str, *, read_only: bool = False) -> str:
         fd = os.open(sql_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as stream:
-                stream.write("SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\\n")
+                stream.write("SET SESSION sql_mode='NO_BACKSLASH_ESCAPES';\n")
                 stream.write(sql)
         except BaseException:
             raise
