@@ -13,6 +13,7 @@ import subprocess
 import sys
 
 from yarn_environment import ensure_yarn
+from mariadb_environment import ensure_mariadb
 
 ROOT = Path(__file__).resolve().parent.parent
 BENCH = ROOT / "frappe-bench"
@@ -111,6 +112,7 @@ def main() -> None:
                 stream.write("\n".join(missing) + "\n")
 
     if SITE not in sites:
+        ensure_mariadb(BENCH, SITE)
         print(f"Creating {SITE}. Frappe will securely prompt for database and Administrator passwords.", flush=True)
         run(cli, "new-site", SITE, cwd=BENCH)
 
