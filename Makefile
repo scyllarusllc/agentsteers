@@ -33,7 +33,7 @@ dev: install frappe-dev-auto
 	exec $(VENV_PYTHON) -m agentsteers.http_server
 
 publish:
-	@$(PYTHON) scripts/publish_frappe.py
+	@$(PYTHON) $(abspath $(dir $(lastword $(MAKEFILE_LIST))))/scripts/publish_frappe.py
 
 test: install
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -v
