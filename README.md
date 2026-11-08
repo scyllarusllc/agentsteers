@@ -270,3 +270,10 @@ make publish
 
 
 **First publish shortcut:** Run `git pull --ff-only && make publish` from the AgentSteers checkout. When no dedicated Bench exists, the command now runs first-time interactive setup before publishing. `make publish-check` remains read-only: it does not create a Bench and therefore cannot pass before initial setup. You can still run `make setup` separately for troubleshooting. This workflow has not yet been tested on the owner's CentOS server.
+
+
+### Project-local Bench CLI virtual environment
+
+First-time `make publish` (or explicit `make setup`) now provisions Frappe's `bench` command into the ignored `.bench-cli-venv/` using Python 3.11. It reuses the executable on subsequent runs and does not use global `pip install` or `sudo`. The publishing script also discovers this local executable. The Frappe Bench itself uses a separate `frappe-bench/env/` environment; AgentSteers MCP development uses `.venv/`. These environments have different purposes and must not be committed to Git.
+
+System packages, running MariaDB/Redis services, Node/Yarn, Python 3.11 and production TLS/reverse-proxy setup are **not** installed or configured by this step. Setup remains interactive, non-root, and requires a fresh dedicated site. The workflow has not yet been verified on the owner's CentOS server.
