@@ -30,6 +30,28 @@ def require(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def diagnose_site_database_config(bench: Path, site: str) -> None:
+    """Read-only database connection metadata; never print credentials."""
+    path = bench / "sites" / site / "site_config.json"
+    try:
+        import json
+        config = json.loads(path.read_text(encoding="utf-8"))
+        db_name = config.get("db_name")
+        db_user = config.get("db_user") or db_name
+        db_host = config.get("db_host") or "localhost"
+        print("Frappe site database configuration (password hidden):", file=sys.stderr)
+        print(f"  db_name: {db_name or '(missing)'}", file=sys.stderr)
+        print(f"  db_user: {db_user or '(missing)'}" +
+              (" (defaults to db_name)" if not config.get("db_user") else ""),
+              file=sys.stderr)
+        print(f"  db_host: {db_host}", file=sys.stderr)
+        print(f"  db_password: {'configured' if config.get('db_password') else 'missing'}",
+              file=sys.stderr, flush=True)
+    except (OSError, ValueError, TypeError) as exc:
+        print(f"Could not inspect site database configuration: {type(exc).__name__}",
+              file=sys.stderr, flush=True)
+
+
 def diagnose_mariadb_root_access() -> None:
     """Read-only MariaDB administrator diagnostic after authentication failure."""
     if not shutil.which("sudo") or not shutil.which("mariadb"):
@@ -306,6 +328,8 @@ def main() -> int:
     ensure_apps_manifest(bench, check_only="--check" in sys.argv)
 
     ensure_mariadb(bench, site, check_only="--check" in sys.argv)
+
+    diagnose_site_database_config(bench, site)
 
     # Verify site and database are accessible BEFORE normal deployment changes.
     # Only after error 1045, allow explicit creation of a *missing* local
