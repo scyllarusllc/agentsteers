@@ -366,7 +366,26 @@ def main() -> int:
         p.name for p in (bench / "sites").iterdir()
         if p.is_dir() and (p / "site_config.json").is_file()
     ]
-    require(sites == [DOMAIN], "Publish requires a dedicated single-site Bench, not a shared Bench.")
+    if sites != [DOMAIN]:
+        sites_dir = bench / "sites"
+        print("Single-site Bench diagnostic (read-only):", flush=True)
+        print(f"Directory: {sites_dir}", flush=True)
+        print("Equivalent command: ls -la frappe-bench/sites/ "
+              "(for the project-managed Bench)", flush=True)
+        for entry in sorted(sites_dir.iterdir(), key=lambda p: p.name):
+            try:
+                stat = entry.lstat()
+                kind = ("symlink" if entry.is_symlink() else
+                        "directory" if entry.is_dir() else "file")
+                print(f"  {entry.name} [{kind}, mode={stat.st_mode & 0o777:03o}]",
+                      flush=True)
+            except OSError as exc:
+                print(f"  {entry.name} [unable to inspect: {exc}]", flush=True)
+        print(f"Detected configured site directories: {sorted(sites)!r}", flush=True)
+        raise RuntimeError(
+            "Publish requires a dedicated single-site Bench, not a shared Bench. "
+            "Directory inspection above is read-only; no files were changed."
+        )
     require(os.access(bench, os.W_OK), "Production Bench is not writable by current user.")
 
     link = bench / "apps" / APP
