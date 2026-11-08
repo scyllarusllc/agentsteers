@@ -95,13 +95,56 @@ def health_check(commit: str) -> None:
                        "investigate routing and restore from backup if necessary.")
 
 
+def _looks_like_bench(candidate: Path, site: str) -> bool:
+    return ((candidate / "apps" / "frappe").is_dir()
+            and (candidate / "sites" / site / "site_config.json").is_file()
+            and (candidate / "env" / "bin" / "python").is_file())
+
+
+def resolve_bench(site: str) -> Path:
+    """Auto-discover a nearby dedicated Bench; never guess among alternatives."""
+    configured = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip()
+    if configured:
+        return Path(configured).expanduser().resolve(strict=True)
+    cwd = Path.cwd().resolve()
+    if _looks_like_bench(cwd, site):
+        return cwd
+
+    # Search only local, conventional locations; no system-wide recursive scan.
+    roots = (ROOT.parent, Path.home())
+    names = ("frappe-bench", "agentsteers-bench", "bench", "frappe")
+    candidates: set[Path] = set()
+    for root in roots:
+        for name in names:
+            candidate = root / name
+            if _looks_like_bench(candidate, site):
+                candidates.add(candidate.resolve())
+        # Also find a custom-named Bench directly beside the Git checkout.
+        if root == ROOT.parent:
+            for candidate in root.iterdir():
+                if candidate.is_dir() and not candidate.is_symlink() and _looks_like_bench(candidate, site):
+                    candidates.add(candidate.resolve())
+    if len(candidates) == 1:
+        selected = next(iter(candidates))
+        print(f"Automatically detected Frappe Bench: {selected}", flush=True)
+        return selected
+    if not candidates:
+        raise RuntimeError(
+            "Could not auto-detect an existing Frappe Bench for " + site
+            + ". Set AGENTSTEERS_PROD_BENCH_DIR to the actual Bench path once."
+        )
+    raise RuntimeError(
+        "Multiple Frappe Benches detected; choose explicitly with "
+        "AGENTSTEERS_PROD_BENCH_DIR: " + ", ".join(str(p) for p in sorted(candidates))
+    )
+
+
 def main() -> int:
-    path = os.environ.get("AGENTSTEERS_PROD_BENCH_DIR", "").strip() or str(Path.cwd())
     site = os.environ.get("AGENTSTEERS_PROD_SITE", DOMAIN).strip()
     require(site == DOMAIN, "Only dedicated production site agentsteers.com is supported.")
     require(os.geteuid() != 0, "Run as the dedicated Bench owner, not root.")
     commit = verify_git_release()
-    bench = Path(path).expanduser().resolve(strict=True)
+    bench = resolve_bench(site)
     print(f"Production Bench candidate: {bench}", flush=True)
     require(bench != ROOT and ROOT not in bench.parents,
             "Current directory is the AgentSteers Git checkout, not a production Bench. "
