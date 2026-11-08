@@ -4,6 +4,38 @@ AgentSteers is an experimental, open-source orchestration project for **authoriz
 
 > **Status (2026-11-08):** Initial documentation only. No worker, control service, deployment, or remote execution has been verified or enabled.
 
+## Proposed architecture
+
+> **Design only:** The diagram describes the intended system. The control service, worker, and integrations are not deployed or operational.
+
+```mermaid
+flowchart TD
+    U["Project owner / developer"] --> C["AgentSteers control service<br/>Authenticate and validate task"]
+    C --> A{"Explicit task approval<br/>and scope check"}
+    A -- "Denied" --> X["Reject and record decision"]
+    A -- "Approved" --> Q["Scoped task queue"]
+    Q --> W["AgentSteers worker<br/>Least privilege, default deny"]
+    W --> G{"Allowlisted repository,<br/>operation and resource limits?"}
+    G -- "No" --> X
+    G -- "Yes" --> S["Isolated execution sandbox"]
+    S --> M["Local mock runner (first milestone)"]
+    S -. "Future, after security review" .-> CLI["Codex CLI on enrolled host"]
+    M --> T["Run tests and collect results"]
+    CLI --> T
+    T --> P["Propose GitHub pull request"]
+    P --> H{"Human code review"}
+    H -- "Approved" --> MERGE["Human-controlled merge"]
+    H -- "Changes requested" --> Q
+    C --> L[("Redacted audit events")]
+    A --> L
+    W --> L
+    T --> L
+    H --> L
+    MERGE -. "Separate authorized deployment only" .-> E["EZ Workbase development environment"]
+```
+
+**Trust boundaries:** The control service does not grant unrestricted shell access. Workers can only process approved, scoped tasks in isolated environments. Codex CLI, remote hosts, merge, and deployment are future integrations, not automatic side effects. EZ Workbase remains a separate project; no production or real payroll access is included.
+
 ## Proposed components
 
 - **Control service:** authenticate users, accept scoped tasks, and require explicit authorization before execution.
