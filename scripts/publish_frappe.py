@@ -19,7 +19,7 @@ import urllib.error
 
 from yarn_environment import ensure_yarn
 from mariadb_environment import ensure_mariadb
-from frappe_database_auth import repair_missing_site_account, _root_sql, _literal
+from frappe_database_auth import repair_missing_site_account, _root_sql, _literal, diagnose_mariadb_root_socket
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_SRC = ROOT / "frappe_app"
@@ -419,6 +419,15 @@ def main() -> int:
     ensure_mariadb(bench, site, check_only="--check" in sys.argv)
 
     diagnose_site_database_config(bench, site)
+
+    # Independent, read-only authentication diagnostic before site DB access.
+    # Do not change accounts, passwords, grants, or databases.
+    if sys.stdin.isatty() and "--check" not in sys.argv:
+        print("MariaDB root Unix socket preflight (read-only):", flush=True)
+        socket_ok = diagnose_mariadb_root_socket()
+        print("MariaDB root socket preflight: "
+              + ("SUCCESS" if socket_ok else "FAILED or unavailable"),
+              flush=True)
 
     # Verify site and database are accessible BEFORE normal deployment changes.
     # Only after error 1045, allow explicit creation of a *missing* local
