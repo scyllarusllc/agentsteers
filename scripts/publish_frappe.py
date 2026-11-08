@@ -147,6 +147,34 @@ def resolve_bench(site: str) -> Path:
     )
 
 
+def ensure_apps_manifest(bench: Path, *, check_only: bool = False) -> None:
+    """Repair only the app manifest of an otherwise validated, dedicated Bench."""
+    manifest = bench / "sites" / "apps.txt"
+    require(not manifest.is_symlink(), "Refusing symlinked sites/apps.txt.")
+    require(not manifest.exists() or manifest.is_file(),
+            "sites/apps.txt is not a regular file.")
+    names = ["frappe"]
+    if (bench / "apps" / APP).is_dir():
+        names.append(APP)
+    if not manifest.exists():
+        require(not check_only,
+                "Missing sites/apps.txt; run make publish to repair it.")
+        manifest.write_text("\n".join(names) + "\n")
+        print("Created missing Frappe sites/apps.txt.", flush=True)
+        return
+    original = manifest.read_text()
+    present = original.splitlines()
+    missing = [name for name in names if name not in present]
+    if missing:
+        require(not check_only,
+                "Missing entries in sites/apps.txt; run make publish to repair them.")
+        with manifest.open("a") as stream:
+            if original and not original.endswith("\n"):
+                stream.write("\n")
+            stream.write("\n".join(missing) + "\n")
+        print("Added missing Frappe app entries: " + ", ".join(missing), flush=True)
+
+
 def main() -> int:
     # Use the standard-library venv/pip path by default throughout publish.
     os.environ.setdefault("BENCH_DISABLE_UV", "1")
@@ -199,6 +227,8 @@ def main() -> int:
         bench_cli = shutil.which("bench")
     require(bool(bench_cli), "Bench CLI not found.")
 
+    ensure_apps_manifest(bench, check_only="--check" in sys.argv)
+
     # Verify site and database are accessible BEFORE attempting changes.
     run([bench_cli, "--site", site, "list-apps"], cwd=bench, capture=True)
 
@@ -212,6 +242,7 @@ def main() -> int:
 
     if not link.exists():
         link.symlink_to(APP_SRC, target_is_directory=True)
+    ensure_apps_manifest(bench)
 
     python = str(bench / "env" / "bin" / "python")
     run([python, "-m", "pip", "install", "-e", str(link)], cwd=bench)
