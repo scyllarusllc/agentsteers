@@ -1,6 +1,6 @@
 # AgentSteers local development helpers. Never deploys or runs Codex.
 SHELL := /bin/sh
-PYTHON ?= python3
+PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
@@ -9,10 +9,9 @@ VENV_PYTHON := $(VENV)/bin/python
 help:
 	@printf '%s\n' 'make install          Create local Python environment and install dependencies' 'make dev              Start loopback-only mock MCP development server' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
-$(VENV_PYTHON):
-	$(PYTHON) -m venv $(VENV)
-
-install: $(VENV_PYTHON)
+install:
+	@command -v $(PYTHON) >/dev/null 2>&1 || { echo 'Python 3.11 not found. On CentOS Stream 9 run: sudo dnf install python3.11 python3.11-pip' >&2; exit 1; }
+	@$(PYTHON) scripts/bootstrap_dev.py
 	$(VENV_PYTHON) -m pip install -e . 'mcp>=1.28,<2' 'uvicorn>=0.30,<1' 'PyJWT[crypto]>=2.9,<3'
 
 dev: install
