@@ -1,0 +1,46 @@
+/* AgentSteers visual treatment for Frappe's built-in login UI.
+   Scoped to login elements; leaves OAuth, password, signup and reset behavior to Frappe. */
+body:has(.for-login) {
+  background: radial-gradient(ellipse at 15% 5%, #1a3040 0, transparent 42%), #0b1220;
+  color: #eef3fa;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+body:has(.for-login) .navbar,
+body:has(.for-login) .web-footer { background: transparent !important; }
+body:has(.for-login) .navbar-brand,
+body:has(.for-login) .navbar a { color: #eef3fa; }
+.for-login, .for-signup, .for-forgot, .for-reset-password {
+  color: #eef3fa;
+}
+.for-login .page-card, .for-signup .page-card,
+.for-forgot .page-card, .for-reset-password .page-card {
+  background: #131e32;
+  border: 1px solid #29364c;
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0,0,0,.28);
+  padding: clamp(24px,4vw,42px);
+}
+.for-login .page-card-head h4, .for-signup .page-card-head h4,
+.for-forgot .page-card-head h4 { color: #eef3fa; font-weight: 800; letter-spacing: -.035em; }
+.for-login .page-card-head p, .for-login .page-card p,
+.for-login .page-card small, .for-signup .page-card p,
+.for-forgot .page-card p { color: #a2b0c2; }
+.for-login .form-control, .for-signup .form-control,
+.for-forgot .form-control, .for-reset-password .form-control {
+  background: #0b1220; border: 1px solid #35445c; color: #eef3fa;
+  border-radius: 9px; min-height: 44px;
+}
+.for-login .form-control:focus, .for-signup .form-control:focus,
+.for-forgot .form-control:focus { border-color: #a9ef9b; box-shadow: 0 0 0 3px #a9ef9b24; }
+.for-login .form-control::placeholder, .for-signup .form-control::placeholder { color: #a2b0c2; }
+.for-login .btn-primary, .for-signup .btn-primary,
+.for-forgot .btn-primary, .for-reset-password .btn-primary {
+  background: #a9ef9b !important; border-color: #a9ef9b !important;
+  color: #152218 !important; border-radius: 9px; font-weight: 750;
+}
+.for-login a, .for-signup a, .for-forgot a, .for-reset-password a { color: #a9ef9b; }
+.for-login a:focus-visible, .for-signup a:focus-visible,
+.for-forgot a:focus-visible { outline: 2px solid #a9ef9b; outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  .for-login *, .for-signup * { transition: none !important; }
+}
