@@ -94,3 +94,7 @@ website route accepts GET/HEAD only for `/`, `/privacy`, `/terms` and
 Frappe API, login, private files or MCP. Caddy configuration remains managed
 separately from `make publish`. The web service is enabled at boot, but its Redis
 dependencies still need persistent service management for full reboot recovery.
+
+Publishing builds both `frappe` and `agentsteers_frappe` frontend assets. The core
+Frappe bundles are required by login and other framework pages; building only the
+custom app leaves unresolved `/website.bundle.css` and JavaScript URLs.

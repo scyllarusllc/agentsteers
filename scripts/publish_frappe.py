@@ -380,7 +380,7 @@ def main() -> int:
     if APP not in installed:
         run([bench_cli, "--site", site, "install-app", APP], cwd=bench)
     run([bench_cli, "--site", site, "migrate"], cwd=bench)
-    run([bench_cli, "build", "--app", APP], cwd=bench)
+    run([bench_cli, "build", "--apps", "frappe," + APP], cwd=bench)
     run([bench_cli, "--site", site, "clear-website-cache"], cwd=bench)
     restart_website_service(bench)
     health_check(commit)
