@@ -124,3 +124,49 @@ EZ Workbase is a separate Frappe-based business application. AgentSteers may eve
 ## Development
 
 Do not treat the mock worker as proof of a working cloud bridge. Develop and test the API contract and permission model locally before enrolling a server or allowing real Codex execution.
+
+
+### Local development commands (Makefile)
+
+Requires Python 3.10+, `make`, Git, and Python virtual environment support. From the repository root:
+
+```bash
+make help
+make install
+make dev
+```
+
+`make dev` installs the editable package plus MCP, Uvicorn and JWT dependencies into `.venv`, generates an **ephemeral development bearer token** if `AGENTSTEERS_DEV_TOKEN` is unset, and starts the mock MCP HTTP service **only on `127.0.0.1:8765`**. The local endpoint is `http://127.0.0.1:8765/mcp`. The generated token is deliberately not printed; if you need to authenticate a separate local client, set a strong token yourself before starting the server:
+
+```bash
+export AGENTSTEERS_DEV_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+make dev
+```
+
+Keep the token private and do not commit it. Stop the foreground server with Ctrl+C. This development server uses a single bearer-token guard, **not** the production OAuth identity and authorization flow. The underlying tools remain mock-only: `make dev` does not start Codex CLI, access a remote server, run real code-generation tasks, deploy anything, or move funds.
+
+Other commands:
+
+| Command | Behavior |
+| --- | --- |
+| `make help` | Display available targets. |
+| `make install` | Create `.venv` and install development dependencies. |
+| `make test` | Run the repository's Python unittest suite locally. |
+| `make pull` | Run `git pull --ff-only` on the current branch; refuse a divergent history. |
+| `make git-pull-force` | **Destructive**: on local `main` only, ask for exact `YES`, fetch `origin/main`, save a recovery ref and stash dirty tracked/untracked non-ignored changes, then `git reset --hard origin/main`. |
+
+For routine updates, prefer:
+
+```bash
+make pull
+```
+
+Only when you deliberately need to discard local `main` differences and align it with GitHub:
+
+```bash
+make git-pull-force
+```
+
+**Force-sync warning:** This can overwrite local changes to tracked files and discard local-only commits from the active branch. A pre-reset commit reference is saved under `refs/backup/agentsteers-main-...`; if the working tree was dirty, the command also creates a stash and `refs/backup/agentsteers-worktree-...`. Untracked non-ignored files are stashed; **ignored files are not saved by this command and are not removed**. No `git clean` is performed. Recovery is manual. Review `git status` and back up important work separately before proceeding. Never invoke the force-sync target automatically from `make dev`.
+
+**Verification:** These Makefile commands are committed to GitHub, but their operation on the target CentOS server has not yet been verified.
