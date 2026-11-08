@@ -1,22 +1,27 @@
 # AgentSteers
 
-AgentSteers is a proposed bridge between **ChatGPT Voice Mode** and **Codex CLI running on the project owner's cloud server**. The user speaks naturally to ChatGPT; an authorized integration submits a scoped job to AgentSteers; AgentSteers dispatches it to an enrolled server worker; the worker invokes Codex CLI in a restricted workspace; and the job status/results return to ChatGPT for a spoken response. AgentSteers is not a standalone chat assistant.
+**AgentSteers turns ChatGPT Voice Mode on an iPad into a voice control interface for Codex CLI on the owner's cloud server.** The user speaks to ChatGPT, the authorized AgentSteers Plugin relays the task to AgentSteers running on the cloud server, and AgentSteers controls Codex CLI installed **on that same server**. Task progress and results flow back through the Plugin to ChatGPT Voice. AgentSteers is the secure bridge, not another chat assistant.
 
 > **Status (2026-11-08):** The end-to-end Voice Mode → integration → server Codex loop is **not yet implemented or verified**. Local mock-worker experiments do not provide live remote execution.
 
 ## Proposed architecture
 
-> **Design only:** The diagram describes the intended system. The control service, worker, and integrations are not deployed or operational.
+> **Target flow, not yet operational:** iPad Voice Mode → AgentSteers Plugin → AgentSteers on the owner's cloud server → Codex CLI on the same server → results back to Voice Mode. The private plugin and local mock MCP components exist, but no live remote plugin/server/Codex link is deployed.
 
 ```mermaid
 flowchart TD
-    U["User speaks in ChatGPT Voice Mode"] --> G["ChatGPT + authorized AgentSteers integration"]
-    G --> C["AgentSteers control service<br/>Authenticate, approve, queue"]
-    C --> W["Cloud server worker<br/>Restricted task execution"]
-    W --> X["Codex CLI<br/>Work on approved repository"]
-    X --> R["Job status, logs and results"]
-    R --> G
-    G --> U
+    V["iPad — ChatGPT Voice Mode"]
+    P["AgentSteers Plugin"]
+    subgraph HOST["Owner's cloud server — same machine"]
+        A["AgentSteers<br/>Authorized task gateway"]
+        X["Codex CLI<br/>Local execution in restricted workspace"]
+        A -->|"Run approved task"| X
+        X -->|"Progress and results"| A
+    end
+    V -->|"Voice instruction"| P
+    P -->|"Authenticated MCP request"| A
+    A -->|"Status and results"| P
+    P -->|"Spoken feedback"| V
 ```
 
 **Scope and safety:** This is the intended architecture, not a working connection. ChatGPT Voice Mode needs a supported, explicitly connected tool/integration to invoke AgentSteers; voice conversation alone does not grant server access. Require scoped authorization, repository/action allowlists, isolated non-root execution, short-lived credentials, cancellation, and redacted audit logs. The worker must return status/errors/results so ChatGPT can explain them. Code changes can be committed/pushed under the owner's authorized workflow, while production deployment, secrets, and financial operations remain separately gated.
@@ -25,7 +30,7 @@ flowchart TD
 
 - **ChatGPT Voice Mode + integration:** voice is the user interface; the connected tool translates a permitted conversation request into an authenticated AgentSteers API call.
 - **Control service:** authenticate the caller, check scope/approval, queue tasks, and expose job status and results.
-- **Server worker:** run on the owner's enrolled cloud host, accept approved jobs only, and invoke Codex CLI with limited privileges in an isolated repository workspace.
+- **Same-server Codex:** AgentSteers runs on the owner's cloud server and uses a restricted local worker to invoke Codex CLI installed on that same machine; no separate execution host is required for the initial design.
 - **Feedback loop:** return task output, test summaries, errors, and progress to the integration for ChatGPT to report in conversation.
 - **GitHub (optional workflow output):** Codex-produced code changes may result in commits/PRs; GitHub is not the primary control path.
 
