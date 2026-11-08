@@ -83,7 +83,7 @@ def repair_missing_site_account(bench: Path, site: str) -> bool:
         f"WHERE User={_literal(user)};\n"
     )
     output = _root_sql(check_sql).splitlines()
-    if len(output) != 2 or output[0] not in ("DATABASE:0", "DATABASE:1") or not re.fullmatch(r"ACCOUNT:\\d+", output[1]):
+    if len(output) != 2 or output[0] not in ("DATABASE:0", "DATABASE:1") or not re.fullmatch(r"ACCOUNT:\d+", output[1]):
         raise RuntimeError("Unexpected MariaDB inspection result; no repair attempted.")
     if output[0] == "DATABASE:0":
         raise RuntimeError("Frappe's site database does not exist; refusing to create an account "
