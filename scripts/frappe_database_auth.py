@@ -84,7 +84,7 @@ def _root_sql(sql: str, *, read_only: bool = False) -> str:
         if result.returncode != 0:
             if read_only:
                 diagnose_mariadb_root_socket()
-            raise RuntimeError("Linux root authentication or MariaDB administrator 
+            raise RuntimeError("Linux root authentication or MariaDB administrator "
                                "query failed. See terminal output; no automatic retry.")
         return result.stdout.strip()
 
