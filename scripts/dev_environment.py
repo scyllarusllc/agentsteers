@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import stat
 from pathlib import Path
 import shutil
 import subprocess
@@ -22,6 +23,44 @@ PROD_SITE = "agentsteers.com"
 DEV_SITE = "agentsteers-dev.localhost"
 DEV_BENCH = (ROOT / "frappe-dev-bench").resolve()
 PROD_BENCH = (ROOT / "frappe-bench").resolve()
+
+
+
+def diagnose_permissions() -> None:
+    """Read-only, sanitized diagnostics for common noexec / permission failures."""
+    print("Development execution diagnostics (read-only):", file=sys.stderr, flush=True)
+    print(f"  cwd: {Path.cwd()}", file=sys.stderr)
+    print(f"  uid: {os.geteuid()}", file=sys.stderr)
+    candidates = (
+        ROOT / ".bench-cli-venv/bin/bench",
+        PROD_BENCH / "env/bin/bench",
+        DEV_BENCH / "env/bin/bench",
+    )
+    system = shutil.which("bench")
+    if system:
+        candidates += (Path(system),)
+    for path in candidates:
+        try:
+            info = path.stat()
+            mode = stat.S_IMODE(info.st_mode)
+            print(f"  {path}: mode={mode:04o}, owner_uid={info.st_uid}, "
+                  f"executable={os.access(path, os.X_OK)}", file=sys.stderr)
+        except OSError as exc:
+            print(f"  {path}: {type(exc).__name__}", file=sys.stderr)
+    findmnt = shutil.which("findmnt")
+    if findmnt:
+        try:
+            for path in (ROOT, DEV_BENCH):
+                result = subprocess.run(
+                    [findmnt, "-n", "-T", str(path), "-o", "TARGET,OPTIONS"],
+                    capture_output=True, text=True, timeout=5, check=False)
+                if result.returncode == 0:
+                    # Mount options do not include passwords or project credentials.
+                    print(f"  mount for {path}: {result.stdout.strip()}", file=sys.stderr)
+        except (OSError, subprocess.TimeoutExpired):
+            print("  mount diagnostics unavailable", file=sys.stderr)
+    print("  Do not sudo, chmod -R, delete Bench directories, or change production permissions.",
+          file=sys.stderr, flush=True)
 
 
 def check(condition: bool, message: str) -> None:
@@ -69,11 +108,16 @@ def run(args: list[str], cwd: Path) -> None:
 
 
 def bench_cli(bench: Path) -> str:
-    for path in (bench / "env/bin/bench", ROOT / ".bench-cli-venv/bin/bench"):
+    # Match publish's managed Bench CLI discovery order; reject unusable
+    # executables rather than trying to chmod system or production files.
+    for path in (ROOT / ".bench-cli-venv/bin/bench", bench / "env/bin/bench"):
         if path.is_file():
+            check(os.access(path, os.X_OK),
+                  f"Bench CLI exists but is not executable: {path}")
             return str(path)
     found = shutil.which("bench")
     check(bool(found), "Bench CLI unavailable.")
+    check(os.access(found, os.X_OK), f"Bench CLI not executable: {found}")
     return str(found)
 
 
@@ -151,4 +195,5 @@ if __name__ == "__main__":
             raise RuntimeError("Usage: dev_environment.py [setup|sync|ensure]")
     except (RuntimeError, OSError, subprocess.CalledProcessError) as exc:
         print(f"Development environment: {exc}", file=sys.stderr)
+        diagnose_permissions()
         raise SystemExit(1)
