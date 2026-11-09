@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help setup install frappe-install frappe-dev-auto dev mcp-dev list start stop restart check-google-login fix-google-login publish test pull git-pull-force
+.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev list start stop restart check-google-login fix-google-login publish test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Serve dedicated Frappe development site on localhost' 'make mcp-dev          Start the previous local mock MCP service' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Serve isolated development site using fresh database' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py
@@ -25,6 +25,15 @@ frappe-dev-auto:
 
 dev:
 	@$(PYTHON) scripts/run_frappe_dev.py
+
+dev-setup:
+	@$(PYTHON) scripts/dev_environment.py setup
+
+dev-fast:
+	@$(PYTHON) scripts/run_frappe_dev.py
+
+dev-sync:
+	@$(PYTHON) scripts/dev_environment.py sync
 
 mcp-dev: install frappe-dev-auto
 	@set -eu; \

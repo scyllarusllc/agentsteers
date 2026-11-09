@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+"""Isolated local development Bench bootstrap and guarded production-data refresh.
+
+Never writes to production Bench or database. Requires an existing dev site for sync.
+Production data is sensitive: local-only, restricted to the Bench owner.
+"""
+from __future__ import annotations
+
+import json
+import os
+from pathlib import Path
+import shutil
+import subprocess
+import sys
+import tempfile
+
+from install_frappe_dev import APP_SRC, APP_NAME, ROOT
+from publish_frappe import resolve_bench
+
+PROD_SITE = "agentsteers.com"
+DEV_SITE = "agentsteers-dev.localhost"
+DEV_BENCH = (ROOT / "frappe-dev-bench").resolve()
+PROD_BENCH = (ROOT / "frappe-bench").resolve()
+
+
+def check(condition: bool, message: str) -> None:
+    if not condition:
+        raise RuntimeError(message)
+
+
+def config(bench: Path, site: str) -> dict:
+    path = bench / "sites" / site / "site_config.json"
+    check(path.is_file() and not path.is_symlink(), f"Missing regular site config: {path}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def validate() -> tuple[Path, dict, dict]:
+    check(os.geteuid() != 0, "Run as the non-root Bench owner.")
+    check(not DEV_BENCH.is_symlink(), "Refusing symlinked development Bench.")
+    check(DEV_BENCH.is_dir(), "Run make dev-setup first.")
+    prod = resolve_bench(PROD_SITE).resolve()
+    check(prod != DEV_BENCH and DEV_BENCH != PROD_BENCH, "Production and development Bench must differ.")
+    check((DEV_BENCH / "apps" / "frappe").is_dir(), "Development Bench is incomplete.")
+    check((DEV_BENCH / "sites" / DEV_SITE).is_dir(), "Development site missing; run make dev-setup.")
+    check(not (DEV_BENCH / "sites" / DEV_SITE).is_symlink(), "Refusing symlinked dev site.")
+    dev_sites = [p.name for p in (DEV_BENCH / "sites").iterdir()
+                 if p.is_dir() and (p / "site_config.json").exists()]
+    check(dev_sites == [DEV_SITE], "Development Bench must contain only the dedicated development site.")
+    p, d = config(prod, PROD_SITE), config(DEV_BENCH, DEV_SITE)
+    for key in ("db_name", "db_password"):
+        check(p.get(key) and d.get(key), f"Both sites need {key}.")
+    check(p["db_name"] != d["db_name"], "Refusing same production/development database.")
+    check((p.get("db_user") or p["db_name"]) != (d.get("db_user") or d["db_name"]),
+          "Refusing shared production/development database user.")
+    for cfg in (p, d):
+        check(cfg.get("db_host", "localhost") in ("localhost", "127.0.0.1", ""),
+              "Only local MariaDB is supported.")
+        check(not cfg.get("db_port") or str(cfg["db_port"]) == "3306",
+              "Nondefault MariaDB port requires manual review.")
+    check(d.get("host_name", "").startswith("http://127.0.0.1:") or
+          d.get("host_name", "").startswith("http://localhost:") or
+          not d.get("host_name"), "Development host_name must be loopback-only.")
+    return prod, p, d
+
+
+def run(args: list[str], cwd: Path) -> None:
+    subprocess.run(args, cwd=cwd, check=True)
+
+
+def bench_cli(bench: Path) -> str:
+    for path in (bench / "env/bin/bench", ROOT / ".bench-cli-venv/bin/bench"):
+        if path.is_file():
+            return str(path)
+    found = shutil.which("bench")
+    check(bool(found), "Bench CLI unavailable.")
+    return str(found)
+
+
+def isolate_site() -> None:
+    cli = bench_cli(DEV_BENCH)
+    # Settings must be applied before starting any development web or worker process.
+    for key, value in (("disable_scheduler", "1"), ("mute_emails", "1"),
+                       ("developer_mode", "1"), ("host_name", "http://127.0.0.1:8001")):
+        run([cli, "--site", DEV_SITE, "set-config", key, value], DEV_BENCH)
+    # Do not allow this dev site to inherit OAuth/social login credentials from production.
+    # Existing encrypted integrations and personal data still require operator care.
+
+
+def setup() -> None:
+    check(os.geteuid() != 0, "Do not initialize Bench as root.")
+    check(sys.stdin.isatty(), "Interactive terminal required for initial setup.")
+    check(not DEV_BENCH.is_symlink(), "Refusing symlinked dev Bench.")
+    prod = resolve_bench(PROD_SITE).resolve()
+    check(DEV_BENCH != prod and DEV_BENCH != PROD_BENCH, "Refusing production Bench.")
+    check(not DEV_BENCH.exists(), "Development Bench already exists; refusing to replace it.")
+    cli = bench_cli(prod)
+    branch = os.environ.get("AGENTSTEERS_FRAPPE_BRANCH", "version-15")
+    check(branch.startswith("version-") and branch[8:].isdigit(), "Invalid Frappe branch.")
+    print("Creating separate development Bench. Frappe will ask for new database credentials.", flush=True)
+    run([cli, "init", "--frappe-branch", branch, "--python", "python3.11", str(DEV_BENCH)], ROOT)
+    dev_cli = bench_cli(DEV_BENCH)
+    run([dev_cli, "new-site", DEV_SITE], DEV_BENCH)
+    link = DEV_BENCH / "apps" / APP_NAME
+    check(not link.exists() and not link.is_symlink(), "Unexpected app path.")
+    link.symlink_to(APP_SRC, target_is_directory=True)
+    run([str(DEV_BENCH / "env/bin/python"), "-m", "pip", "install", "-e", str(APP_SRC)], DEV_BENCH)
+    run([dev_cli, "--site", DEV_SITE, "install-app", APP_NAME], DEV_BENCH)
+    isolate_site()
+    print("Development site initialized with a fresh database. Production data sync is disabled.", flush=True)
+
+
+def sync() -> None:
+    """Fail closed: production records/credentials must never be cloned into dev."""
+    raise RuntimeError("Production database sync is disabled. Use a fresh isolated development site and synthetic test data.")
+
+
+if __name__ == "__main__":
+    try:
+        command = sys.argv[1] if len(sys.argv) == 2 else ""
+        if command == "setup":
+            setup()
+        elif command == "sync":
+            sync()
+        else:
+            raise RuntimeError("Usage: dev_environment.py [setup|sync]")
+    except (RuntimeError, OSError, subprocess.CalledProcessError) as exc:
+        print(f"Development environment: {exc}", file=sys.stderr)
+        raise SystemExit(1)

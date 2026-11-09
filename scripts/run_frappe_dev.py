@@ -13,10 +13,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def main() -> int:
+    os.environ.setdefault("AGENTSTEERS_BENCH_DIR", str(ROOT / "frappe-dev-bench"))
     bench = find_bench()
     if bench is None:
         raise RuntimeError("No development Bench found. Set AGENTSTEERS_BENCH_DIR to a dedicated development Bench.")
     site = select_site(bench)
+    from dev_environment import DEV_BENCH, DEV_SITE, validate, isolate_site
+    if bench.resolve() != DEV_BENCH or site != DEV_SITE:
+        raise RuntimeError("Only the isolated AgentSteers development Bench/site may be served.")
+    validate()
+    isolate_site()
     if site == "agentsteers.com":
         raise RuntimeError("Refusing to serve production site.")
     # Only use a dedicated development Bench. Do not reuse the managed
@@ -30,7 +36,7 @@ def main() -> int:
     if not port.isdigit() or not 1024 <= int(port) <= 65535:
         raise RuntimeError("AGENTSTEERS_DEV_PORT must be a number from 1024 to 65535.")
     print(f"Starting Frappe development site {site} at http://127.0.0.1:{port}", flush=True)
-    print("Localhost only. Press Ctrl+C to stop. This does not deploy or restart production.", flush=True)
+    print("Localhost only; web server without background workers. Press Ctrl+C to stop.", flush=True)
     subprocess.run([str(cli), "--site", site, "serve", "--host", "127.0.0.1",
                     "--port", port, "--noreload"], cwd=bench, check=True)
     return 0
