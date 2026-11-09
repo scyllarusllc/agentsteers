@@ -1,5 +1,20 @@
 # AgentSteers
 
+## ChatGPT plugin / public MCP release gate (2026-11-10)
+
+**Owner direction:** Prepare the mock-only service for a public HTTPS connection at `https://mcp.agentsteers.com/mcp`. This is authorization to pursue a *safe public mock test*, not evidence that deployment occurred or permission to expose Codex, shell, Git write actions, payroll data, or sensitive content.
+
+**Current source status:** The existing `src/agentsteers/mock_http_mcp.py` has four mock task tools protected by one shared bearer token. `oauth_security.py` includes an OAuth JWT verifier, but it is not mounted into the public MCP route. The new `oauth_discovery.py` and `tests/test_oauth_discovery.py` are optional building blocks for protected-resource metadata and tests; they are not wired to the web app, and they do not constitute a complete OAuth authorization flow. The owner reports previous direct HTTP MCP tool tests, including successful cancellation, but this session has not verified public service state, tests, OAuth login, or ChatGPT plugin connection.
+
+**Hard release gate:** A bearer token was previously pasted into chat. Revoke/rotate it using private server-side secrets storage **before** enabling an externally reachable route. Never write the replacement token into git, console logs, chat, or documentation. Validate least-privilege service identity and repository allowlist, TLS, expected Host, mock-only execution, negative authentication cases, request limits, rollback, and website isolation. Do not make the route publicly reachable if any gate fails.
+
+**Preferred ChatGPT path:** Implement a real authorization server using authorization code with PKCE and suitable OAuth client registration, resource/audience binding, metadata, Bearer challenges, server-side access token verification and per-actor task permissions. Keep the legacy static-token mock test logically separate. ChatGPT Work web plugin authentication, OAuth tool discovery and four tool calls must be demonstrated before claiming integration. iPad Voice and remote Codex are later, separate acceptance milestones.
+
+**Deployment is not performed by GitHub commits.** DNS/TLS, secure host configuration, process supervision, proxy changes and live tests require authorized server access and must be reported from actual execution, not inferred from repository state.
+
+Official docs: https://developers.openai.com/api/docs/guides/custom-mcp-server and https://developers.openai.com/plugins/build/auth
+
+
 **AgentSteers turns ChatGPT Voice Mode on an iPad into a voice control interface for Codex CLI on the owner's cloud server.** The user speaks to ChatGPT, the authorized AgentSteers Plugin relays the task to AgentSteers running on the cloud server, and AgentSteers controls Codex CLI installed **on that same server**. Task progress and results flow back through the Plugin to ChatGPT Voice. AgentSteers is the secure bridge, not another chat assistant.
 
 > **Status (2026-11-08):** The end-to-end Voice Mode → integration → server Codex loop is **not yet implemented or verified**. Local mock-worker experiments do not provide live remote execution.
