@@ -1,0 +1,35 @@
+# Mock-only persistent loopback service; NOT the production ChatGPT connector.
+# Review paths/credentials before installing. Never pair with the temporary "make mcp" session.
+[Unit]
+Description=AgentSteers mock MCP (loopback only; no Codex)
+After=network.target
+ConditionPathExists=/home/frappe/github/agentsteers/.venv/bin/gunicorn
+
+[Service]
+Type=simple
+User=frappe
+Group=frappe
+WorkingDirectory=/home/frappe/github/agentsteers
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/home/frappe/github/agentsteers/src
+# Provision as root: root:root 0600, outside the repository.
+# Required: AGENTSTEERS_MCP_MOCK_ENABLED=1, AGENTSTEERS_MCP_MOCK_TOKEN,
+# AGENTSTEERS_MCP_MOCK_HOST=mcp.agentsteers.com, AGENTSTEERS_MCP_MOCK_REPOS.
+EnvironmentFile=/etc/agentsteers/mock-mcp.env
+ExecStart=/home/frappe/github/agentsteers/.venv/bin/gunicorn --bind 127.0.0.1:8766 --workers 1 --access-logfile - --error-logfile - agentsteers.mock_http_mcp:application
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/run
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitNOFILE=4096
+
+# Deliberately no [Install] section: opt-in manual activation only.
+# Do not publicly proxy this mock: it uses a shared bearer token, not OAuth.
