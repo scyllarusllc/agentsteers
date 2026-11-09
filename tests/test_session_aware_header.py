@@ -10,7 +10,9 @@ class SessionHeaderTests(unittest.TestCase):
         header = (ROOT / "includes" / "site_header.html").read_text()
         self.assertIn('frappe.session.user != "Guest"', header)
         self.assertIn("{% if agentsteers_signed_in %}", header)
-        self.assertIn('href="/user/account">Account</a>', header)
+        self.assertIn('frappe.get_fullname(frappe.session.user)', header)
+        self.assertIn('{{ agentsteers_display_name | e }}', header)
+        self.assertIn('href="/user/account" aria-label="Your account"', header)
         self.assertIn('href="/?cmd=web_logout">Sign out</a>', header)
         self.assertIn('href="/user/login?redirect-to=%2Fuser%2Faccount">Sign in</a>', header)
 
