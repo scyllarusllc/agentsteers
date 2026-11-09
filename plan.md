@@ -1,5 +1,20 @@
 # AgentSteers Development Plan
 
+## 2026-11-10 — Lightweight OAuth Mock MCP implementation
+
+**Code delivered:** standalone `oauth_mock_mcp.py` app factory and `tests/test_oauth_mock_mcp.py`, plus OAuth test inclusion in `make mcp-mock-test`. The app is mock-only and uses existing JWT-verifier interface, protected-resource metadata, actor isolation and simple three-scope authorization.
+
+**Not connected/deployed:** no live OAuth authorization server has been configured, no OAuth app has been mounted through Caddy, and the old static-token `make mcp` remains unchanged. Test suite results and ChatGPT plugin connectivity are unverified.
+
+- [x] Build separate, default-off OAuth-protected mock task service.
+- [x] Add negative tests for missing/invalid tokens, unauthorized scopes, unlisted repository, hostile origins, and cross-owner task access.
+- [ ] Run `make mcp-mock-test` with installed OAuth dependencies and fix any failures; record exact results.
+- [ ] Choose authorization server, set PKCE S256, issuer/JWKS, proper `aud` resource, and owner subject.
+- [ ] Add trusted server-only configuration loader and explicit, independent launch command; do not merge with static-token session.
+- [ ] Mount discovery and OAuth route in reviewed HTTPS proxy, verify OAuth flow and all four tools through ChatGPT web.
+- [ ] Keep real Codex CLI disabled until separately approved and tested.
+
+
 ### 2026-11-10 — Mock bearer rotation command
 
 - [x] Implement `make rotate`, backed by `scripts/rotate_mock_token.py`, to generate and atomically save a new private Mock MCP token with no secret output.
