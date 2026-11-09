@@ -1,5 +1,14 @@
 # AgentSteers
 
+### Real Codex execution readiness (2026-11-10)
+
+The owner has requested progress toward enabling real Codex CLI tasks and reports that the temporary MCP mock service is operating. **The server status was not independently verified in this GitHub development session.** The public `mock_http_mcp.py` remains mock-only, with no command execution.
+
+`src/agentsteers/codex_readiness.py` now contains a **disabled-by-default** local preflight that rejects root operation, non-allowlisted repositories, unsafe checkout ownership/path, and approvals that do not match a verified actor/task/repository. `tests/test_codex_readiness.py` provides offline negative cases and is included in `make mcp-mock-test`. The module performs **no Codex invocation** and does not enable execution by toggling a public setting.
+
+**Not yet implemented or independently verified:** OAuth-linked actor identity in the public MCP service; durable, expiring, one-time approvals issued by a trusted server workflow; a non-root isolated Codex executor with filesystem/network sandbox, resource limits and cancellation; durable audit logs; secrets isolation; end-to-end tests; authorized server deployment. All of these remain required before real task execution can be enabled. Keep the existing mock public endpoint separate from any eventual real-execution endpoint.
+
+
 ### Rotate the temporary Mock MCP bearer token (`make rotate`)
 
 From the checked-out AgentSteers repository on the authorized **Linux host**, as the **same non-root account** that runs `make mcp`:
