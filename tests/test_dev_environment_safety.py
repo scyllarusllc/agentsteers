@@ -84,6 +84,22 @@ class DevEnvironmentSafetyTests(unittest.TestCase):
                 dev_environment.setup()
             self.assertEqual(os.environ["BENCH_DISABLE_UV"], "1")
 
+    def test_setup_checks_yarn_before_creating_bench(self):
+        # Fail closed if Yarn cannot execute; never start Bench init.
+        with patch.object(dev_environment.os, "geteuid", return_value=1000), \
+             patch.object(dev_environment.sys.stdin, "isatty", return_value=True), \
+             patch.object(dev_environment, "DEV_BENCH") as path, \
+             patch.object(dev_environment, "resolve_bench") as resolve, \
+             patch.object(dev_environment, "ensure_yarn", side_effect=RuntimeError("Yarn permission denied")) as yarn, \
+             patch.object(dev_environment, "bench_cli") as cli:
+            path.is_symlink.return_value = False
+            path.exists.return_value = False
+            resolve.return_value = dev_environment.ROOT / "frappe-bench"
+            with self.assertRaisesRegex(RuntimeError, "Yarn permission denied"):
+                dev_environment.setup()
+            yarn.assert_called_once_with()
+            cli.assert_not_called()
+
     def test_no_production_data_import_commands(self):
         text = (SCRIPTS / "dev_environment.py").read_text(encoding="utf-8")
         self.assertNotIn("mariadb-dump", text)
