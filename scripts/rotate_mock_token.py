@@ -22,7 +22,7 @@ def assert_stopped(host="127.0.0.1", port=8766):
                 "Mock MCP port 8766 is active. Stop the make mcp session or "
                 "supervised mock service before rotating; restart it afterwards."
             )
-    except (ConnectionRefusedError, TimeoutError):
+    except ConnectionRefusedError:
         return
     except OSError as exc:
         # Unknown network errors are NOT evidence that the old service stopped.
