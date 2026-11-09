@@ -9,8 +9,8 @@
 <link rel="stylesheet" href="/assets/agentsteers_frappe/css/styles.css?v=8c9d2838a8ae">
 </head>
 <body>
-<header class="site-header wrap"><a class="brand" href="/"><span class="brand-icon">A↗</span> AgentSteers</a><nav><a href="/">Home</a></nav></header>
-<main class="wrap account-page">
+{% include "agentsteers_frappe/www/includes/site_header.html" %}
+<main id="main" class="wrap account-page">
 {% if signed_in %}
 <p class="eyebrow">ACCOUNT</p>
 <h1>You're signed in.</h1>
@@ -25,4 +25,5 @@
 {% endif %}
 <p class="footnote">Account access does not grant permission to run Codex or use the future MCP service.</p>
 </main>
+{% include "agentsteers_frappe/www/includes/site_footer.html" %}
 </body></html>
