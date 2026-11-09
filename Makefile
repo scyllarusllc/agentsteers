@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev mcp-mock-install mcp-mock-test mcp-mock-start mcp-mock-proxy-preview mcp-mock-proxy-apply mcp list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
+.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev mcp-mock-install mcp-mock-test mcp-mock-start mcp-mock-proxy-preview mcp-mock-proxy-apply mcp rotate list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make mcp-mock-install Install Gunicorn for isolated HTTP mock testing' 'make mcp-mock-test   Run Mock HTTP MCP and authentication boundary tests' 'make mcp-mock-start  Start token-protected Mock HTTP MCP on localhost:8766 (foreground)' 'make mcp-mock-proxy-preview Preview dedicated Caddy MCP site change' 'make mcp-mock-proxy-apply  Test and enable dedicated HTTPS MCP proxy (confirmation)' 'make mcp             One-command temporary Mock MCP HTTPS test session' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make mcp-mock-install Install Gunicorn for isolated HTTP mock testing' 'make mcp-mock-test   Run Mock HTTP MCP and authentication boundary tests' 'make mcp-mock-start  Start token-protected Mock HTTP MCP on localhost:8766 (foreground)' 'make mcp-mock-proxy-preview Preview dedicated Caddy MCP site change' 'make mcp-mock-proxy-apply  Test and enable dedicated HTTPS MCP proxy (confirmation)' 'make mcp             One-command temporary Mock MCP HTTPS test session' 'make rotate          Rotate private Mock MCP token after stopping the session' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py
@@ -55,6 +55,7 @@ mcp-mock-install:
 	@$(VENV_PYTHON) -m pip install 'gunicorn>=21,<24'
 
 mcp-mock-test:
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_rotate_mock_token.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mock_http_mcp.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_remote_mcp_guard.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mcp_mock_caddy.py' -v
@@ -98,6 +99,10 @@ mcp-mock-proxy-apply: mcp-mock-test
 # temporarily enables HTTPS Caddy route, and restores the route on exit.
 mcp:
 	@$(PYTHON) scripts/run_mcp_mock_session.py
+
+# Rotate the local private Mock MCP token; refuses if the local mock listener is active.
+rotate:
+	@$(PYTHON) scripts/rotate_mock_token.py
 
 list:
 	@$(PYTHON) scripts/manage_website.py list
