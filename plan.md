@@ -1,5 +1,14 @@
 # AgentSteers Development Plan
 
+### OAuth WSGI configuration gate (2026-11-10)
+
+- [x] Add default-off `oauth_mock_wsgi.py` with fixed MCP audience, required server-side issuer/JWKS, owner and repo allowlists, and HTTP 503 when not configured.
+- [x] Add `tests/test_oauth_mock_wsgi.py` and include it in `make mcp-mock-test`.
+- [ ] Verify all new tests via GitHub Actions and on the authorized Linux host; do not claim success from a queued run.
+- [ ] Configure real OAuth 2.1 authorization server and independently deploy the separate WSGI app behind reviewed HTTPS routing, only after confirming PKCE, token scope and ownership tests.
+- [ ] Validate ChatGPT Work web and keep legacy mock service plus real Codex execution unchanged.
+
+
 ## 2026-11-10 — Lightweight OAuth Mock MCP implementation
 
 **Code delivered:** standalone `oauth_mock_mcp.py` app factory and `tests/test_oauth_mock_mcp.py`, plus OAuth test inclusion in `make mcp-mock-test`. The app is mock-only and uses existing JWT-verifier interface, protected-resource metadata, actor isolation and simple three-scope authorization.
