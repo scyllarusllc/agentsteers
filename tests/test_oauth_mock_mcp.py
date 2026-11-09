@@ -69,6 +69,13 @@ class OAuthMockMCPTests(unittest.TestCase):
         names = {tool["name"] for tool in self.call("tools/list")["body"]["result"]["tools"]}
         self.assertEqual(names, {"submit_task", "get_task_status",
                                  "get_task_result", "cancel_task"})
+        tools = self.call("tools/list")["body"]["result"]["tools"]
+        self.assertEqual(
+            {t["name"]: t["_meta"]["securitySchemes"][0]["scopes"] for t in tools},
+            {"submit_task": ["agentsteers:submit"],
+             "get_task_status": ["agentsteers:read"],
+             "get_task_result": ["agentsteers:read"],
+             "cancel_task": ["agentsteers:cancel"]})
 
     def test_lifecycle_and_actor_isolation(self):
         created = self.invoke("alice", "submit_task", {
@@ -83,14 +90,20 @@ class OAuthMockMCPTests(unittest.TestCase):
         self.assertEqual(self.invoke("alice", "cancel_task",
                                      {"task_id": task_id})["status"], "cancelled")
 
-    def test_read_only_actor_cannot_submit_or_cancel(self):
-        result = self.invoke("reader", "submit_task", {
-            "repository": "scyllarusllc/agentsteers", "instruction": "No"})
-        self.assertEqual(result["error"], "forbidden")
-        created = self.invoke("alice", "submit_task", {
-            "repository": "scyllarusllc/agentsteers", "instruction": "No"})
-        self.assertEqual(self.invoke("reader", "cancel_task",
-                                     {"task_id": created["task_id"]})["error"], "forbidden")
+    def test_read_only_actor_gets_linking_challenge(self):
+        for name, args in [
+            ("submit_task", {"repository": "scyllarusllc/agentsteers",
+                             "instruction": "No"}),
+            ("cancel_task", {"task_id": "unused"}),
+        ]:
+            r = self.call("tools/call", {"name": name, "arguments": args},
+                          actor="reader")
+            result = r["body"]["result"]
+            self.assertTrue(result["isError"])
+            self.assertIn("insufficient_scope",
+                          result["_meta"]["mcp/www_authenticate"][0])
+            self.assertIn("resource_metadata",
+                          result["_meta"]["mcp/www_authenticate"][0])
 
     def test_repo_allowlist(self):
         result = self.invoke("alice", "submit_task", {
