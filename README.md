@@ -1,8 +1,19 @@
 # AgentSteers
 
-### OAuth authorization-server setup preparation (2026-11-10)
+## Authentication decision (2026-11-10): use the existing Frappe OAuth provider
 
-A test-environment setup runbook is available at [docs/oauth-authorization-server.md](docs/oauth-authorization-server.md). It recommends a separate, existing OAuth provider (Keycloak is a candidate) for Authorization Code + PKCE S256, client registration, access-token audience `https://mcp.agentsteers.com/mcp`, and the three Mock MCP scopes. `scripts/check_oauth_metadata.py` checks a locally saved, non-secret authorization-server discovery JSON for issuer, HTTPS endpoints, S256 and selected client mode; `tests/test_oauth_metadata.py` contains negative cases. **This is preparation, not an installed authorization server or a connected ChatGPT plugin.** Do not put login credentials or tokens into the repository.
+**Chosen path: Frappe OAuth for AgentSteers' ChatGPT-to-MCP login during development/testing.** Reuse the existing Frappe deployment and its user accounts. **Do not deploy Keycloak or Cloudflare Access for this path**; previously added Keycloak Compose and configuration guides are retained as inactive, optional reference material only. The earlier Keycloak recommendation is superseded by this decision.
+
+Target flow: **ChatGPT OAuth client → existing Frappe authorization server → AgentSteers OAuth-protected Mock MCP** at `https://mcp.agentsteers.com/mcp`. Keep `make mcp`'s static-Bearer Mock route unchanged until OAuth end-to-end testing succeeds; keep real Codex execution disabled.
+
+**Implementation gap (not a live integration):** Frappe's actual release and OAuth provider endpoints, authorization-code + PKCE S256 behavior, redirect URI registration, server discovery metadata and ChatGPT client-registration compatibility must be verified on the installed instance. Determine whether Frappe emits a signed JWT *access token* with issuer/JWKS/audience claims or an opaque access token. The current `AccessTokenVerifier` and `oauth_mock_wsgi.py` require JWT/JWKS and **cannot be presumed compatible with Frappe-issued tokens**. For opaque tokens, implement a server-side Frappe token introspection/validation adapter using protected server credentials, strict issuer/active-client/resource/audience checks where supported, a locally enforced repository allowlist, and server-side ownership authorization. Do not treat a Frappe login cookie, API key, or ID token as an MCP OAuth access token. If Frappe does not support a required ChatGPT OAuth feature natively, build a narrowly scoped compatibility bridge rather than exposing admin credentials.
+
+Required acceptance: real Frappe login via ChatGPT web, metadata and PKCE verification, rejection of missing/invalid/expired credentials, scoped mock tool calls (`agentsteers:read`, `agentsteers:submit`, `agentsteers:cancel`), and cross-user task isolation. **No Frappe OAuth login, server deployment, token issuance, or ChatGPT integration is claimed verified yet.** Keep OAuth secrets in private server configuration, never in GitHub or chat.
+
+
+### Historical alternative: Keycloak authorization-server preparation (not selected)
+
+A test-environment setup runbook is available at [docs/oauth-authorization-server.md](docs/oauth-authorization-server.md). This older document describes a separate OAuth provider (Keycloak); the current decision is to reuse Frappe instead for Authorization Code + PKCE S256, client registration, access-token audience `https://mcp.agentsteers.com/mcp`, and the three Mock MCP scopes. `scripts/check_oauth_metadata.py` checks a locally saved, non-secret authorization-server discovery JSON for issuer, HTTPS endpoints, S256 and selected client mode; `tests/test_oauth_metadata.py` contains negative cases. **This is preparation, not an installed authorization server or a connected ChatGPT plugin.** Do not put login credentials or tokens into the repository.
 
 
 ### Default-off OAuth WSGI configuration (prototype only)
@@ -16,7 +27,7 @@ A separate **opt-in OAuth resource-server application** now exists at `src/agent
 
 `tests/test_oauth_mock_mcp.py` exercises protected-resource metadata, unauthenticated challenge, four tools, mock task lifecycle, cross-actor isolation, scope denial, repository allowlisting, HTTPS/Host/Origin checks and unknown-tool rejection using a **fake verifier only**. `make mcp-mock-test` also invokes OAuth discovery and JWT verifier test modules. **No automated test pass is asserted** until tests actually run on the host/CI.
 
-To activate the new OAuth route later, choose an actual OAuth 2.1 authorization server that supports Authorization Code + PKCE, publish real authorization-server metadata, configure a real `AccessTokenVerifier` with trusted issuer/audience/JWKS and an owner-subject allowlist, and intentionally mount the new WSGI app behind a reviewed loopback-only HTTPS proxy. The test authorization server URL is not a deployed service. Authenticate and verify `initialize`, `tools/list`, `submit_task`, `get_task_status`, `get_task_result` and `cancel_task` in ChatGPT web before considering the bridge connected. iPad Voice and actual Codex execution remain separate future milestones.
+To activate the new OAuth route later, verify the chosen Frappe OAuth provider (or build the necessary compatibility adapter) as an actual OAuth 2.1-compatible authorization server that supports Authorization Code + PKCE, publish real authorization-server metadata, configure a real `AccessTokenVerifier` with trusted issuer/audience/JWKS and an owner-subject allowlist, and intentionally mount the new WSGI app behind a reviewed loopback-only HTTPS proxy. The test authorization server URL is not a deployed service. Authenticate and verify `initialize`, `tools/list`, `submit_task`, `get_task_status`, `get_task_result` and `cancel_task` in ChatGPT web before considering the bridge connected. iPad Voice and actual Codex execution remain separate future milestones.
 
 
 ### Real Codex execution readiness (2026-11-10)
