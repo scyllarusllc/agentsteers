@@ -1,5 +1,21 @@
 # AgentSteers
 
+### Rotate the temporary Mock MCP bearer token (`make rotate`)
+
+From the checked-out AgentSteers repository on the authorized **Linux host**, as the **same non-root account** that runs `make mcp`:
+
+```sh
+# First stop the running make mcp session (Ctrl+C) and verify the MCP route has been restored.
+make rotate
+# Then start a new temporary session when ready:
+make mcp
+```
+
+`make rotate` generates a new random token using Python's `secrets`, atomically replaces `~/.config/agentsteers/mock-mcp.token`, and retains mode `0600` in a private `0700` directory. It never prints the credential, and refuses a symlink, insecure existing file, root execution, or an active/uncertain local Mock MCP listener on `127.0.0.1:8766`. It **does not** restart processes, change Caddy, alter an external credential store, or revoke an old token already held by another service. The operator must ensure all active sessions have stopped; independently configured `AGENTSTEERS_MCP_MOCK_TOKEN` environments and client/plugin credentials must be updated separately. A leaked credential remains unsafe until all services accepting it are stopped or reconfigured.
+
+This rotates only the temporary mock shared token, **not** OAuth credentials. Never paste the replacement token into chat or commit it. Run `make mcp-mock-test` and verify HTTP 401 for revoked credentials before public usage. GitHub commit alone is not a server change.
+
+
 ## ChatGPT plugin / public MCP release gate (2026-11-10)
 
 **Owner direction:** Prepare the mock-only service for a public HTTPS connection at `https://mcp.agentsteers.com/mcp`. This is authorization to pursue a *safe public mock test*, not evidence that deployment occurred or permission to expose Codex, shell, Git write actions, payroll data, or sensitive content.
