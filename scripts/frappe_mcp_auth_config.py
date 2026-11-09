@@ -11,7 +11,7 @@ from pathlib import Path
 import stat
 import sys
 
-from check_frappe_mcp_auth import REQUIRED, RESOURCE, validate
+from scripts.check_frappe_mcp_auth import REQUIRED, RESOURCE, validate
 
 CONFIG = Path.home() / ".config" / "agentsteers" / "frappe-oauth.env"
 KEYS = ("AGENTSTEERS_FRAPPE_CLIENT_ID", "AGENTSTEERS_FRAPPE_CLIENT_SECRET",
