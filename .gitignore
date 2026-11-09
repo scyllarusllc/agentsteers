@@ -20,3 +20,6 @@ dist/
 .env
 .env.*
 !.env.example
+
+# Isolated development Bench (contains generated database credentials)
+/frappe-dev-bench/

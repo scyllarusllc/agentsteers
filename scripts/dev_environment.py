@@ -16,12 +16,13 @@ import sys
 import tempfile
 
 from install_frappe_dev import APP_SRC, APP_NAME, ROOT
-from publish_frappe import resolve_bench
+from publish_frappe import resolve_bench, ensure_apps_manifest
 from yarn_environment import ensure_yarn
+from bench_redis import ensure_bench_redis
 
 PROD_SITE = "agentsteers.com"
 DEV_SITE = "agentsteers-dev.localhost"
-DEV_BENCH = (ROOT / "frappe-dev-bench").resolve()
+DEV_BENCH = ROOT / "frappe-dev-bench"
 PROD_BENCH = (ROOT / "frappe-bench").resolve()
 
 
@@ -139,7 +140,17 @@ def setup() -> None:
     check(not DEV_BENCH.is_symlink(), "Refusing symlinked dev Bench.")
     prod = resolve_bench(PROD_SITE).resolve()
     check(DEV_BENCH != prod and DEV_BENCH != PROD_BENCH, "Refusing production Bench.")
-    check(not DEV_BENCH.exists(), "Development Bench already exists; refusing to replace it.")
+    existing = DEV_BENCH.exists()
+    if existing:
+        check(DEV_BENCH.is_dir() and (DEV_BENCH / "apps/frappe").is_dir()
+              and (DEV_BENCH / "env/bin/python").is_file()
+              and (DEV_BENCH / "sites/common_site_config.json").is_file(),
+              "Existing development Bench is incomplete; refusing to overwrite it.")
+        sites = [p for p in (DEV_BENCH / "sites").iterdir()
+                 if p.is_dir() and (p / "site_config.json").exists()]
+        check(not sites, "Existing configured sites must be validated, never recreated.")
+        check(not (DEV_BENCH / "sites" / DEV_SITE).exists(),
+              "Partial development site exists; preserve it and inspect before retrying.")
     # Match make publish: validate working Yarn Classic (and prepend project-local
     # executable to PATH if necessary) before Bench creates any dev directories.
     ensure_yarn()
@@ -147,16 +158,43 @@ def setup() -> None:
     branch = os.environ.get("AGENTSTEERS_FRAPPE_BRANCH", "version-15")
     check(branch.startswith("version-") and branch[8:].isdigit(), "Invalid Frappe branch.")
     print("Creating separate development Bench. Frappe will ask for new database credentials.", flush=True)
-    run([cli, "init", "--frappe-branch", branch, "--python", "python3.11", str(DEV_BENCH)], ROOT)
+    if not existing:
+        run([cli, "init", "--frappe-branch", branch, "--python", "python3.11", str(DEV_BENCH)], ROOT)
     dev_cli = bench_cli(DEV_BENCH)
-    run([dev_cli, "new-site", DEV_SITE], DEV_BENCH)
-    link = DEV_BENCH / "apps" / APP_NAME
-    check(not link.exists() and not link.is_symlink(), "Unexpected app path.")
-    link.symlink_to(APP_SRC, target_is_directory=True)
-    run([str(DEV_BENCH / "env/bin/python"), "-m", "pip", "install", "-e", str(APP_SRC)], DEV_BENCH)
-    run([dev_cli, "--site", DEV_SITE, "install-app", APP_NAME], DEV_BENCH)
-    isolate_site()
+    ensure_bench_redis(DEV_BENCH, start=True)
+    from create_dev_site import create_dev_site
+    create_dev_site(DEV_BENCH, ROOT, config(prod, PROD_SITE))
+    validate()
+    prepare_dev_app()
     print("Development site initialized with a fresh database. Production data sync is disabled.", flush=True)
+
+
+def prepare_dev_app() -> None:
+    """Resume app registration/installation without recreating a development site."""
+    validate()
+    cli = bench_cli(DEV_BENCH)
+    link = DEV_BENCH / "apps" / APP_NAME
+    check(not (link.exists() or link.is_symlink()) or link.resolve() == APP_SRC.resolve(),
+          "Conflicting development app path; refusing overwrite.")
+    if not link.exists():
+        link.symlink_to(APP_SRC, target_is_directory=True)
+    # Frappe checks this registry before install-app, independently of pip.
+    ensure_apps_manifest(DEV_BENCH)
+    ensure_bench_redis(DEV_BENCH, start=True)
+    isolate_site()
+    result = subprocess.run([cli, "--site", DEV_SITE, "list-apps"], cwd=DEV_BENCH,
+                            text=True, capture_output=True, check=True)
+    installed = {line.split()[0] for line in result.stdout.splitlines() if line.strip()}
+    newly_installed = APP_NAME not in installed
+    if newly_installed:
+        run([str(DEV_BENCH / "env/bin/python"), "-m", "pip", "install", "-e", str(APP_SRC)], DEV_BENCH)
+        run([cli, "--site", DEV_SITE, "install-app", APP_NAME], DEV_BENCH)
+    manifest = DEV_BENCH / "sites/assets/assets.json"
+    assets = json.loads(manifest.read_text()) if manifest.is_file() else {}
+    if newly_installed or not all(name in assets for name in
+                                 ("website.bundle.css", "login.bundle.css", "frappe-web.bundle.js")):
+        ensure_yarn()
+        run([cli, "build", "--apps", "frappe," + APP_NAME], DEV_BENCH)
 
 
 def ensure() -> None:
@@ -171,9 +209,14 @@ def ensure() -> None:
     else:
         check(DEV_BENCH.is_dir(),
               "Existing development Bench path is not a directory; refusing to modify it.")
-        print("Using existing isolated development Bench.", flush=True)
+        if not (DEV_BENCH / "sites" / DEV_SITE).exists():
+            print("Development Bench exists without a site; resuming isolated setup.", flush=True)
+            setup()
+        else:
+            print("Using existing isolated development Bench.", flush=True)
     # Fail closed for incomplete or cross-wired development sites.
     validate()
+    prepare_dev_app()
     print("Isolated development Bench verified. Starting loopback server.", flush=True)
 
 

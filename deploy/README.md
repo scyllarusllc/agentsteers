@@ -98,3 +98,46 @@ dependencies still need persistent service management for full reboot recovery.
 Publishing builds both `frappe` and `agentsteers_frappe` frontend assets. The core
 Frappe bundles are required by login and other framework pages; building only the
 custom app leaves unresolved `/website.bundle.css` and JavaScript URLs.
+
+### Resuming development setup
+
+`make dev` resumes a structurally valid `frappe-dev-bench/` when its development
+site has not been created yet. It never replaces an existing site or reinitializes
+the Bench. The site uses a fresh generated MariaDB database and local account,
+with Linux root socket provisioning via interactive `su`; the Frappe Administrator
+password is entered separately during bootstrap. Production data and credentials
+are never copied. Incomplete provisioning keeps a private recovery record and
+stops for inspection rather than creating further database objects.
+
+Development Redis runs on its own configured loopback ports (13001/11001 on this
+server). The web launcher uses the development Bench Python directly and binds
+only `127.0.0.1:8001` (`AGENTSTEERS_DEV_PORT` can override the port), with no workers,
+remote debugger, public proxy changes or production restart. The shared project
+Bench CLI is used for management commands; `env/bin/bench` is not required.
+
+Development app setup registers the app in the development `sites/apps.txt`
+before calling `install-app`. `make dev` also resumes this registration and app
+installation when a previous setup created the dev site but stopped before the
+app was installed. An already installed app with complete core asset mappings is
+not reinstalled or rebuilt on each launch. These repairs are restricted to the
+validated development Bench; production app registration is unchanged.
+
+### Fast live website updates
+
+Run `make publish-hot` as `frappe` to refresh `https://agentsteers.com/`
+from the source checkout already linked into the production Bench. It validates
+production isolation, installed app, Python syntax, core asset manifest and Redis;
+requests `HOTUPDATE agentsteers.com`; builds custom frontend bundles only if
+present; clears Frappe caches; sends HUP to the dedicated Gunicorn master for a
+graceful worker replacement; and checks the public website. It does not restart
+the master or Caddy, install packages, migrate, back up the database, or perform
+Git commits/pushes. `su` may prompt for Linux root authentication for the signal.
+
+Use full `make publish` for dependency, DocType/schema, hooks or patch changes.
+This fast command assumes the database already matches the application: it does
+not determine whether pending schema changes require a migration. Because the
+production app uses an editable source link, source edits may already affect
+live templates/assets before invoking either command; this is not an isolated
+staging or rollback mechanism. Use `make dev` for private experimentation.
+Cloudflare/browser caches may retain assets at unchanged URLs; version CSS/JS
+URLs when editing those files. No development server or MCP endpoint is enabled.

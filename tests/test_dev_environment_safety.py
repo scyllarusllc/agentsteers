@@ -12,6 +12,11 @@ import dev_environment
 
 
 class DevEnvironmentSafetyTests(unittest.TestCase):
+    def setUp(self):
+        p = patch.object(dev_environment, 'prepare_dev_app')
+        self.prepare_app = p.start()
+        self.addCleanup(p.stop)
+
     def test_launchers_parse(self):
         for name in ("dev_environment.py", "run_frappe_dev.py"):
             with self.subTest(name=name):
@@ -43,6 +48,48 @@ class DevEnvironmentSafetyTests(unittest.TestCase):
             dev_environment.ensure()
             setup.assert_not_called()
             validate.assert_called_once_with()
+
+    def test_existing_bench_without_site_resumes_setup(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            bench = Path(folder) / "dev"
+            bench.mkdir()
+            with patch.object(dev_environment.os, "geteuid", return_value=1000), \
+                 patch.object(dev_environment, "DEV_BENCH", bench), \
+                 patch.object(dev_environment, "setup") as setup, \
+                 patch.object(dev_environment, "validate") as validate:
+                dev_environment.ensure()
+                setup.assert_called_once_with()
+                validate.assert_called_once_with()
+
+    def test_resuming_valid_empty_bench_never_runs_bench_init(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder); bench = root / "dev"; prod = root / "prod"
+            for name in ("apps/frappe", "env/bin", "sites"):
+                (bench / name).mkdir(parents=True)
+            (bench / "env/bin/python").touch()
+            (bench / "sites/common_site_config.json").write_text("{}")
+            with patch.object(dev_environment.os, "geteuid", return_value=1000), \
+                 patch.object(dev_environment.sys.stdin, "isatty", return_value=True), \
+                 patch.object(dev_environment, "DEV_BENCH", bench), \
+                 patch.object(dev_environment, "PROD_BENCH", prod), \
+                 patch.object(dev_environment, "resolve_bench", return_value=prod), \
+                 patch.object(dev_environment, "ensure_yarn"), \
+                 patch.object(dev_environment, "bench_cli", return_value="/managed/bench"), \
+                 patch.object(dev_environment, "ensure_bench_redis"), \
+                 patch.object(dev_environment, "config", return_value={"db_name": "production"}), \
+                 patch.object(dev_environment, "isolate_site"), \
+                 patch.object(dev_environment, "validate"), \
+                 patch.object(dev_environment, "run") as run, \
+                 patch("create_dev_site.create_dev_site") as create:
+                dev_environment.setup()
+                create.assert_called_once_with(bench, dev_environment.ROOT, {"db_name": "production"})
+                self.assertFalse(any("init" in c.args[0] for c in run.call_args_list))
+                self.assertTrue((bench / "apps/frappe").is_dir())
+
+    def test_dev_bench_is_git_ignored(self):
+        self.assertIn("/frappe-dev-bench/", (SCRIPTS.parent / ".gitignore").read_text())
 
     def test_ensure_refuses_symlinked_bench(self):
         with patch.object(dev_environment.os, "geteuid", return_value=1000), \

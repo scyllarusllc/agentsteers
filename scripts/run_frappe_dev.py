@@ -19,6 +19,7 @@ def main() -> int:
         raise RuntimeError("No development Bench found. Set AGENTSTEERS_BENCH_DIR to a dedicated development Bench.")
     site = select_site(bench)
     from dev_environment import DEV_BENCH, DEV_SITE, validate, isolate_site
+    from bench_redis import ensure_bench_redis
     if bench.resolve() != DEV_BENCH or site != DEV_SITE:
         raise RuntimeError("Only the isolated AgentSteers development Bench/site may be served.")
     validate()
@@ -29,16 +30,14 @@ def main() -> int:
     # production Bench created by make setup or the public site.
     if bench == (ROOT / "frappe-bench").resolve():
         raise RuntimeError("Project-managed frappe-bench is used for production; provide a separate development Bench.")
-    cli = bench / "env" / "bin" / "bench"
-    if not cli.is_file():
-        raise RuntimeError("Development Bench CLI not found at env/bin/bench.")
+    ensure_bench_redis(bench, start=True)
     port = os.environ.get("AGENTSTEERS_DEV_PORT", "8001")
     if not port.isdigit() or not 1024 <= int(port) <= 65535:
         raise RuntimeError("AGENTSTEERS_DEV_PORT must be a number from 1024 to 65535.")
     print(f"Starting Frappe development site {site} at http://127.0.0.1:{port}", flush=True)
     print("Localhost only; web server without background workers. Press Ctrl+C to stop.", flush=True)
-    subprocess.run([str(cli), "--site", site, "serve", "--host", "127.0.0.1",
-                    "--port", port, "--noreload"], cwd=bench, check=True)
+    subprocess.run([str(bench / "env/bin/python"), str(ROOT / "scripts/serve_dev_site.py"),
+                    "--site", site, "--port", port], cwd=bench / "sites", check=True)
     return 0
 
 
