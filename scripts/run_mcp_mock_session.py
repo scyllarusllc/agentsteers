@@ -7,6 +7,7 @@ Not a persistent system service; use dedicated deployment for 24/7 operation.
 from __future__ import annotations
 
 import os
+import pwd
 from pathlib import Path
 import secrets
 import socket
@@ -99,6 +100,10 @@ def write_proxy(original, new_config):
 
 
 def main():
+    # Read-only startup diagnostics; do not print credentials or tokens.
+    print(f"MCP diagnostic - working directory (pwd): {Path.cwd()}", flush=True)
+    print(f"MCP diagnostic - project directory: {ROOT}", flush=True)
+    print(f"MCP diagnostic - Linux user (whoami): {pwd.getpwuid(os.geteuid()).pw_name}", flush=True)
     check_venv()
     test_suite()
     token = token_from_private_file()
