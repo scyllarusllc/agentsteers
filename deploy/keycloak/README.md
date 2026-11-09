@@ -24,6 +24,7 @@ From the AgentSteers repository root:
 cp deploy/keycloak/env.example deploy/keycloak/.env.auth
 chmod 600 deploy/keycloak/.env.auth
 # Edit .env.auth locally; replace every placeholder with independent random secrets.
+python3 scripts/check_keycloak_env.py deploy/keycloak/.env.auth
 docker compose --env-file deploy/keycloak/.env.auth -f deploy/keycloak/compose.yaml config --quiet
 docker compose --env-file deploy/keycloak/.env.auth -f deploy/keycloak/compose.yaml up -d
 docker compose --env-file deploy/keycloak/.env.auth -f deploy/keycloak/compose.yaml ps
