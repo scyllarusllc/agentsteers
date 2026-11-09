@@ -128,6 +128,27 @@ class DevEnvironmentSafetyTests(unittest.TestCase):
                 dev_environment.setup()
             yarn.assert_called_once_with()
 
+    def test_bench_cli_refuses_non_executable_project_managed_cli(self):
+        with patch.object(dev_environment, "ROOT") as root, \
+             patch.object(dev_environment.os.path, "isfile", return_value=False):
+            # The .bench-cli-venv executable is checked first.
+            path = root / ".bench-cli-venv/bin/bench"
+            path.is_file.return_value = True
+            with patch.object(dev_environment.os, "access", return_value=False):
+                with self.assertRaisesRegex(RuntimeError, "not executable"):
+                    dev_environment.bench_cli(root / "frappe-bench")
+
+    def test_diagnostics_do_not_modify_permissions(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(dev_environment, "ROOT", Path(directory)), \
+             patch.object(dev_environment, "DEV_BENCH", Path(directory) / "dev"), \
+             patch.object(dev_environment, "PROD_BENCH", Path(directory) / "prod"), \
+             patch.object(dev_environment.shutil, "which", return_value=None), \
+             patch.object(dev_environment.subprocess, "run") as cmd:
+            dev_environment.diagnose_permissions()
+            cmd.assert_not_called()
+
     def test_no_production_data_import_commands(self):
         text = (SCRIPTS / "dev_environment.py").read_text(encoding="utf-8")
         self.assertNotIn("mariadb-dump", text)

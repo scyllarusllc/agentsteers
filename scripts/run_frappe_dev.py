@@ -47,4 +47,6 @@ if __name__ == "__main__":
         raise SystemExit(main())
     except (RuntimeError, OSError, subprocess.CalledProcessError) as exc:
         print(f"Frappe development server stopped: {exc}", file=sys.stderr)
+        from dev_environment import diagnose_permissions
+        diagnose_permissions()
         raise SystemExit(1)
