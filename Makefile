@@ -50,8 +50,8 @@ mcp-server: install
 	printf '%s\\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
 	exec $(VENV_PYTHON) -m agentsteers.http_server
 
-mcp-check:
-	@$(PYTHON) scripts/check_mcp_local.py
+mcp-check: install
+	@$(VENV_PYTHON) scripts/check_mcp_local.py
 
 list:
 	@$(PYTHON) scripts/manage_website.py list
