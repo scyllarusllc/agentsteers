@@ -141,3 +141,36 @@ live templates/assets before invoking either command; this is not an isolated
 staging or rollback mechanism. Use `make dev` for private experimentation.
 Cloudflare/browser caches may retain assets at unchanged URLs; version CSS/JS
 URLs when editing those files. No development server or MCP endpoint is enabled.
+
+
+### Embedded MCP preflight in the existing Frappe WSGI process (not launched)
+
+The existing `agentsteers-web.service` Gunicorn process now has a **disabled-by-default**
+`/mcp` WSGI route. There is no additional service, port, systemd unit, or standalone
+MCP process. This initial compatibility slice implements JSON-mode MCP
+`initialize`, `ping` and `tools/list` (returns an empty tool list). It
+intentionally rejects `tools/call`; no real task submission, authorization,
+Codex or user-data access is available. SSE/session handling and authenticated
+user-scoped task actions are **not** implemented. This is NOT a production-ready
+ChatGPT connector.
+
+The route is disabled unless the Gunicorn process explicitly receives both
+`AGENTSTEERS_MCP_EMBEDDED=1` and a private, randomly generated
+`AGENTSTEERS_MCP_EMBEDDED_TOKEN` of at least 32 characters. Neither the
+`make publish` command nor the checked-in systemd unit supplies these values.
+Do **not** enable this flag in production: the development bearer token is not
+OAuth or per-user authorization.
+
+The current public Caddy website allowlist must continue to return 404 on
+`/mcp`; `deploy/Caddyfile.prelaunch` must continue returning 503 for
+`mcp.agentsteers.com`. Do NOT add a public proxy route to the preflight.
+Integration tests can instantiate the WSGI app directly offline. Before a
+public release, add authenticated identity and repository-scoped authorization,
+MCP protected resource metadata, request limits, complete transport compatibility
+tests, logging redaction and explicit operator review; only then separately
+approve proxy/HTTPS routing and publish.
+
+Offline regression tests:
+```sh
+PYTHONPATH=src python3.11 -m unittest discover -s tests -p 'test_embedded_mcp_wsgi.py' -v
+```
