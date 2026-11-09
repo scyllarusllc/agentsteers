@@ -129,3 +129,17 @@ make mcp-mock-proxy-apply                         # tests + Caddy validation + i
 `CADDY_CONFIG=/path/to/Caddyfile` may be supplied if the server's real Caddyfile is not `/etc/caddy/Caddyfile`. The apply command requires permission to read and modify the real Caddyfile, plus permission to reload Caddy, and only works when that file has exactly one recognizable `mcp.agentsteers.com` block (the current 503 prelaunch block or the known mock proxy block). It refuses unknown/imported layouts: review such configurations manually; do **not** overwrite the site's entire Caddyfile. It checks that the loopback backend is listening, validates the candidate configuration using Caddy, asks for `ENABLE MOCK MCP`, backs up the original file, changes only the MCP hostname block, reloads Caddy, and attempts restoration if reload fails. It does not start a permanent supervised service, make DNS changes, or verify a live public connection.
 
 The mock proxy template is `deploy/Caddyfile.mock-mcp`; the Caddy integration helper is `scripts/mcp_mock_caddy.py`. Run the public 401/initialize/tools smoke tests described above after activation. Keep the MCP connection website status as **Not verified** until actual client checks succeed. Caddy activation is separate from website publishing, and server secrets must remain outside GitHub.
+
+## One-command temporary MCP test session
+
+After the repository is updated on the authorized host, from the project root:
+
+```sh
+make mcp
+```
+
+The new `make mcp` target invokes `scripts/run_mcp_mock_session.py`. It creates a local Python virtual environment if absent, installs Gunicorn if necessary, runs the three Mock MCP/auth/Caddy unit test modules, and generates/reuses a random Bearer token in `~/.config/agentsteers/mock-mcp.token` (mode 0600; never committed or displayed). It requires read/write access to the actual Caddyfile (default `/etc/caddy/Caddyfile`, override with `CADDY_CONFIG`) and permission to reload Caddy. It refuses to replace an unknown MCP hostname configuration or an already-active proxy. When the operator types `ENABLE MOCK MCP`, it launches a single Gunicorn mock-only worker on `127.0.0.1:8766`, checks readiness, validates the proposed Caddyfile, backs up the original, and enables `https://mcp.agentsteers.com/mcp` through the dedicated Caddy host. No Codex CLI or arbitrary command execution is enabled.
+
+**Temporary, foreground mode:** keep the terminal running during the test. On Ctrl+C, the script attempts to restore the original Caddyfile and stops the Mock process. If it cannot restore, it warns and the operator must restore the backup manually. This is not an always-on systemd service, does not update DNS, and does not prove public accessibility or ChatGPT Voice compatibility. The operator should check HTTPS 401 without a token and complete initialize/tools/list/mock lifecycle with the token.
+
+The `mcp-mock-*` granular commands remain available for debugging and future supervised deployment. Use `make pull` first if the server checkout is behind `main`; `make mcp` intentionally does not change Git history or website deployments.
