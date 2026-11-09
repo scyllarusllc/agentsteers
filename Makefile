@@ -76,7 +76,7 @@ mcp-mock-start:
 		echo 'Missing local virtual environment. Run make install first.' >&2; exit 1; \
 	fi; \
 	$(VENV_PYTHON) -m gunicorn --version >/dev/null || { echo 'Run make mcp-mock-install first.' >&2; exit 1; }; \
-	printf '%s\\n' 'Starting Mock MCP on 127.0.0.1:8766 (one worker; no Codex). Stop with Ctrl+C.'; \
+	printf '%s\n' 'Starting Mock MCP on 127.0.0.1:8766 (one worker; no Codex). Stop with Ctrl+C.'; \
 	exec env PYTHONPATH=src $(VENV_PYTHON) -m gunicorn --bind 127.0.0.1:8766 --workers 1 --access-logfile - agentsteers.mock_http_mcp:application
 
 list:
