@@ -1,5 +1,14 @@
 # AgentSteers
 
+### Frappe OAuth MCP testing commands (not yet publicly routed)
+
+- `make mcp-auth-check`: inspect required server environment settings, without network calls or printing credentials.
+- `make mcp-auth`: validate configuration and start the **separate loopback-only** Frappe OAuth Mock MCP listener on `127.0.0.1:8767`, using a single Gunicorn worker. It does not edit Caddy or enable Codex.
+- `make mcp`: unchanged temporary **static Bearer** Mock MCP test session; it is **not** Frappe OAuth.
+- `make mcp-mock-test`: offline test modules, including Frappe introspection tests.
+
+The environment is supplied **privately on the host**: `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1`, `AGENTSTEERS_FRAPPE_ISSUER`, `AGENTSTEERS_FRAPPE_CLIENT_ID`, `AGENTSTEERS_FRAPPE_CLIENT_SECRET`, `AGENTSTEERS_FRAPPE_SUBJECTS`, `AGENTSTEERS_FRAPPE_REPOS`, and `AGENTSTEERS_FRAPPE_MCP_RESOURCE=https://mcp.agentsteers.com/mcp`. Configuration checks are structural only; real Frappe issuer, introspection response claims, Client registration/PKCE and live OAuth login **remain unverified**. Do not expose this listener publicly until the installed Frappe release and token claims are confirmed. Never paste or commit credentials.
+
 ## Authentication decision (2026-11-10): use the existing Frappe OAuth provider
 
 **Chosen path: Frappe OAuth for AgentSteers' ChatGPT-to-MCP login during development/testing.** Reuse the existing Frappe deployment and its user accounts. **Do not deploy Keycloak or Cloudflare Access for this path**; previously added Keycloak Compose and configuration guides are retained as inactive, optional reference material only. The earlier Keycloak recommendation is superseded by this decision.
@@ -121,20 +130,20 @@ AgentSteers would route an approved, scoped task to the server's local Codex CLI
 
 ```mermaid
 flowchart TD
-    V["iPad — ChatGPT Voice Mode"]
-    P["Private AgentSteers Plugin"]
-    subgraph HOST["Owner's cloud server — one machine"]
-        M["mcp.agentsteers.com<br/>HTTPS + verified OAuth access"]
-        A["AgentSteers<br/>Scoped task gateway"]
-        X["Codex CLI<br/>Restricted local execution"]
-        M <--> A
-        A -->|"Approved development task"| X
-        X -->|"Progress and results"| A
-    end
-    V -->|"Voice instruction"| P
-    P -->|"Authenticated MCP request"| M
-    M -->|"Task status and result"| P
-    P -->|"Spoken feedback"| V
+    C["ChatGPT client (OAuth login)"]
+    P["Private AgentSteers plugin (not yet connected)"]
+    F["Existing Frappe OAuth server (verification pending)"]
+    M["mcp.agentsteers.com/mcp (HTTPS routing pending)"]
+    G["Frappe token introspection and owner/scope checks (implemented; not live-verified)"]
+    T["AgentSteers Mock MCP: submit/status/result/cancel (no code execution)"]
+    X["Future restricted Codex CLI worker (DISABLED)"]
+    C --> P
+    P -->|"Authorization Code + PKCE (to verify)"| F
+    F -->|"OAuth access token (to verify)"| P
+    P -->|"MCP request with token"| M
+    M --> G
+    G -->|"authorized calls only"| T
+    T -.->|"future separate release gate"| X
 ```
 
 **Scope and safety:** This is the intended architecture, not a working connection. ChatGPT Voice Mode needs a supported, explicitly connected tool/integration to invoke AgentSteers; voice conversation alone does not grant server access. Require scoped authorization, repository/action allowlists, isolated non-root execution, short-lived credentials, cancellation, and redacted audit logs. The worker must return status/errors/results so ChatGPT can explain them. Code changes can be committed/pushed under the owner's authorized workflow, while production deployment, secrets, and financial operations remain separately gated.
