@@ -71,7 +71,7 @@ class RemoteMCPGuardTests(unittest.TestCase):
 
     def test_rejects_ambiguous_authorization(self):
         self.assertEqual(self.call(HTTP_AUTHORIZATION="Bearer one,Bearer two")["status"], 401)
-        self.assertEqual(self.call(HTTP_AUTHORIZATION="Bearer x\\r\\nInjected: true")["status"], 401)
+        self.assertEqual(self.call(HTTP_AUTHORIZATION="Bearer x\r\nInjected: true")["status"], 401)
 
     def test_rejects_inconsistent_forwarded_protocol(self):
         self.assertEqual(self.call(HTTP_X_FORWARDED_PROTO="http")["status"], 403)
