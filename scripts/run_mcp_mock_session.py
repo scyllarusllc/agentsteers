@@ -6,7 +6,6 @@ Not a persistent system service; use dedicated deployment for 24/7 operation.
 """
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import secrets
@@ -27,7 +26,8 @@ PORT = 8766
 
 def check_venv():
     if not PYTHON.is_file():
-        raise RuntimeError("Python venv missing; run make install once")
+        print("Creating isolated Python virtual environment for Mock MCP...")
+        subprocess.run([sys.executable, "-m", "venv", str(ROOT / ".venv")], check=True)
     try:
         subprocess.run([str(PYTHON), "-m", "gunicorn", "--version"], check=True,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
