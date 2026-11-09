@@ -100,7 +100,9 @@ class OAuthMockMCP:
             return _rpc(start_response, request_id, result={})
         if method == "tools/list":
             return _rpc(start_response, request_id, result={"tools": [
-                {"name": name, **details, "_meta": {"securitySchemes": [\n                    {"type": "oauth2", "scopes": [ACTION_SCOPE[name]]}\n                ]}} for name, details in METHODS.items()
+                {"name": name, **details, "_meta": {"securitySchemes": [
+                    {"type": "oauth2", "scopes": [ACTION_SCOPE[name]]}
+                ]}} for name, details in METHODS.items()
             ]})
         if method != "tools/call":
             return _rpc(start_response, request_id, error=(-32601, "Method not found"))
