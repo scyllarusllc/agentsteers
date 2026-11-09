@@ -2,7 +2,7 @@
 
 ### Frappe OAuth MCP testing commands (not yet publicly routed)
 
-- `make mcp-auth-check`: inspect required server environment settings, without network calls or printing credentials.
+- `make mcp-auth-check`: automatically sets `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1` for this command and checks the other required server environment settings, without network calls or printing credentials.
 - `make mcp-auth`: validate configuration and start the **separate loopback-only** Frappe OAuth Mock MCP listener on `127.0.0.1:8767`, using a single Gunicorn worker. It does not edit Caddy or enable Codex.
 - `make mcp`: unchanged temporary **static Bearer** Mock MCP test session; it is **not** Frappe OAuth.
 - `make mcp-mock-test`: offline test modules, including Frappe introspection tests.
