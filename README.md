@@ -2,12 +2,12 @@
 
 ### Frappe OAuth MCP testing commands (not yet publicly routed)
 
-- `make mcp-auth-check`: automatically sets `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1` for this command and checks the other required server environment settings, without network calls or printing credentials.
-- `make mcp-auth`: validate configuration and start the **separate loopback-only** Frappe OAuth Mock MCP listener on `127.0.0.1:8767`, using a single Gunicorn worker. It does not edit Caddy or enable Codex.
+- `make mcp-auth-check`: automatically sets `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1` and defaults `AGENTSTEERS_FRAPPE_ISSUER` to `https://agentsteers.com` (the configured production Frappe site), unless explicitly overridden; checks other required settings without network calls or printing credentials.
+- `make mcp-auth`: use the same automatic OAuth enablement and default issuer, validate configuration, and start the **separate loopback-only** Frappe OAuth Mock MCP listener on `127.0.0.1:8767`, using a single Gunicorn worker. It does not edit Caddy or enable Codex.
 - `make mcp`: unchanged temporary **static Bearer** Mock MCP test session; it is **not** Frappe OAuth.
 - `make mcp-mock-test`: offline test modules, including Frappe introspection tests.
 
-The environment is supplied **privately on the host**: `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1`, `AGENTSTEERS_FRAPPE_ISSUER`, `AGENTSTEERS_FRAPPE_CLIENT_ID`, `AGENTSTEERS_FRAPPE_CLIENT_SECRET`, `AGENTSTEERS_FRAPPE_SUBJECTS`, `AGENTSTEERS_FRAPPE_REPOS`, and `AGENTSTEERS_FRAPPE_MCP_RESOURCE=https://mcp.agentsteers.com/mcp`. Configuration checks are structural only; real Frappe issuer, introspection response claims, Client registration/PKCE and live OAuth login **remain unverified**. Do not expose this listener publicly until the installed Frappe release and token claims are confirmed. Never paste or commit credentials.
+The default issuer is based on the repository production site configuration, **not proof that Frappe OAuth issuer metadata is live or compatible**. Override it privately with `AGENTSTEERS_FRAPPE_ISSUER=https://your-real-issuer` if the deployed issuer differs. The remaining environment is supplied **privately on the host**: `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1`, `AGENTSTEERS_FRAPPE_ISSUER`, `AGENTSTEERS_FRAPPE_CLIENT_ID`, `AGENTSTEERS_FRAPPE_CLIENT_SECRET`, `AGENTSTEERS_FRAPPE_SUBJECTS`, `AGENTSTEERS_FRAPPE_REPOS`, and `AGENTSTEERS_FRAPPE_MCP_RESOURCE=https://mcp.agentsteers.com/mcp`. Configuration checks are structural only; real Frappe issuer, introspection response claims, Client registration/PKCE and live OAuth login **remain unverified**. Do not expose this listener publicly until the installed Frappe release and token claims are confirmed. Never paste or commit credentials.
 
 ## Authentication decision (2026-11-10): use the existing Frappe OAuth provider
 
