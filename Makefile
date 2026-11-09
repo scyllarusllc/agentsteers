@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev mcp-mock-install mcp-mock-test mcp-mock-start mcp-mock-proxy-preview mcp-mock-proxy-apply mcp mcp-auth mcp-auth-check mcp-auth-start rotate list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
+.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev mcp-mock-install mcp-mock-test mcp-mock-start mcp-mock-proxy-preview mcp-mock-proxy-apply mcp mcp-auth mcp-auth-check mcp-auth-start mcp-auth-setup rotate list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make mcp-mock-install Install Gunicorn for isolated HTTP mock testing' 'make mcp-mock-test   Run Mock HTTP MCP and authentication boundary tests' 'make mcp-mock-start  Start token-protected Mock HTTP MCP on localhost:8766 (foreground)' 'make mcp-mock-proxy-preview Preview dedicated Caddy MCP site change' 'make mcp-mock-proxy-apply  Test and enable dedicated HTTPS MCP proxy (confirmation)' 'make mcp             One-command temporary bearer-only Mock MCP HTTPS test session' 'make mcp-auth       Start Frappe OAuth localhost Mock MCP (config checked; no Caddy changes)' 'make mcp-auth-check  Validate Frappe OAuth Mock MCP configuration (no network changes)' 'make mcp-auth-start  Start separate Frappe OAuth Mock MCP on localhost:8767, no public routing' 'make rotate          Rotate private Mock MCP token after stopping the session' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make mcp-mock-install Install Gunicorn for isolated HTTP mock testing' 'make mcp-mock-test   Run Mock HTTP MCP and authentication boundary tests' 'make mcp-mock-start  Start token-protected Mock HTTP MCP on localhost:8766 (foreground)' 'make mcp-mock-proxy-preview Preview dedicated Caddy MCP site change' 'make mcp-mock-proxy-apply  Test and enable dedicated HTTPS MCP proxy (confirmation)' 'make mcp             One-command temporary bearer-only Mock MCP HTTPS test session' 'make mcp-auth       Start Frappe OAuth localhost Mock MCP (config checked; no Caddy changes)' 'make mcp-auth-setup  One-time private Frappe OAuth client configuration' 'make mcp-auth-check  Validate Frappe OAuth Mock MCP configuration (no network changes)' 'make mcp-auth-start  Start separate Frappe OAuth Mock MCP on localhost:8767, no public routing' 'make rotate          Rotate private Mock MCP token after stopping the session' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py
@@ -110,15 +110,17 @@ mcp:
 # Frappe OAuth MCP is a DIFFERENT listener, never automatically exposed by Caddy.
 # Operator must supply AGENTSTEERS_FRAPPE_* values privately and independently
 # review Frappe's OAuth token claims, issuer, scopes and client registration.
+mcp-auth-setup:
+	@$(PYTHON) scripts/frappe_mcp_auth_config.py setup
+
 mcp-auth-check:
-	@AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1 AGENTSTEERS_FRAPPE_ISSUER="$${AGENTSTEERS_FRAPPE_ISSUER:-https://agentsteers.com}" PYTHONPATH=src $(VENV_PYTHON) scripts/check_frappe_mcp_auth.py
+	@$(PYTHON) scripts/frappe_mcp_auth_config.py check
 
 mcp-auth: mcp-auth-start
 
 mcp-auth-start: mcp-auth-check
 	@$(VENV_PYTHON) -m gunicorn --version >/dev/null 2>&1 || { echo 'Gunicorn missing. Run make mcp-mock-install.' >&2; exit 1; }
-	@printf '%s\n' 'Starting Frappe OAuth Mock MCP on 127.0.0.1:8767 only; no Caddy changes and no Codex.'
-	@exec env AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1 AGENTSTEERS_FRAPPE_ISSUER="$${AGENTSTEERS_FRAPPE_ISSUER:-https://agentsteers.com}" PYTHONPATH=src $(VENV_PYTHON) -m gunicorn --bind 127.0.0.1:8767 --workers 1 agentsteers.frappe_oauth_wsgi:application
+	@$(PYTHON) scripts/frappe_mcp_auth_config.py start
 
 # Rotate the local private Mock MCP token; refuses if the local mock listener is active.
 rotate:
