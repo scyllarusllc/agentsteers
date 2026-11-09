@@ -105,3 +105,27 @@ Run the offline tests and verify this standalone Mock MCP deployment with author
 **Rollback:** restore `deploy/Caddyfile.prelaunch` (503) for the MCP hostname, validate and reload Caddy, then stop the dedicated Mock MCP process. This does not require taking the AgentSteers website offline.
 
 **Important:** This checklist is deployment guidance, not an assertion of live service, completed testing, or permission to execute Codex.
+
+## Makefile MCP + Caddy integration (2026-11-09)
+
+MCP development now has dedicated Makefile commands; this does **not** change the running server or public Caddy automatically:
+
+```sh
+make pull
+make install                  # once on the host, if needed
+make mcp-mock-install         # once; installs Gunicorn in local venv
+make mcp-mock-test            # protocol, auth and proxy configuration tests
+# Configure private AGENTSTEERS_MCP_MOCK_* environment variables.
+make mcp-mock-start           # foreground; loopback 127.0.0.1:8766
+```
+
+From another terminal on the same authorized host, while the mock server is listening:
+
+```sh
+make mcp-mock-proxy-preview                       # read-only preview
+make mcp-mock-proxy-apply                         # tests + Caddy validation + interactive confirmation
+```
+
+`CADDY_CONFIG=/path/to/Caddyfile` may be supplied if the server's real Caddyfile is not `/etc/caddy/Caddyfile`. The apply command requires permission to read and modify the real Caddyfile, plus permission to reload Caddy, and only works when that file has exactly one recognizable `mcp.agentsteers.com` block (the current 503 prelaunch block or the known mock proxy block). It refuses unknown/imported layouts: review such configurations manually; do **not** overwrite the site's entire Caddyfile. It checks that the loopback backend is listening, validates the candidate configuration using Caddy, asks for `ENABLE MOCK MCP`, backs up the original file, changes only the MCP hostname block, reloads Caddy, and attempts restoration if reload fails. It does not start a permanent supervised service, make DNS changes, or verify a live public connection.
+
+The mock proxy template is `deploy/Caddyfile.mock-mcp`; the Caddy integration helper is `scripts/mcp_mock_caddy.py`. Run the public 401/initialize/tools smoke tests described above after activation. Keep the MCP connection website status as **Not verified** until actual client checks succeed. Caddy activation is separate from website publishing, and server secrets must remain outside GitHub.
