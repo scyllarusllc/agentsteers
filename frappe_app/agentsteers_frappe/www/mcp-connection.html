@@ -20,14 +20,18 @@
 {% else %}
 <p>To manage your website account, <a href="/user/login?redirect-to=%2Fmcp-connection">sign in</a>. Website sign-in alone does not authorize MCP access.</p>
 {% endif %}
-<h2>Test connection plan</h2>
+<h2>Mock MCP launch checklist</h2>
+<p>This is an operator-run test deployment, not an automatic connection. <strong>Connection status: Not verified.</strong> The site does not probe the server or accept a Bearer token.</p>
 <ol>
-<li>Deploy a separate HTTPS mock-only MCP endpoint after local tests.</li>
-<li>Configure a private Bearer token on the server; never paste a token into this page or GitHub.</li>
-<li>Connect an MCP-capable client and verify initialize, tool discovery, and mock task lifecycle.</li>
-<li>Enable isolated Codex execution only after separate authorization and worker testing.</li>
+<li><strong>Update &amp; test:</strong> Pull the reviewed GitHub <code>main</code> commit on the authorized server. Run <code>PYTHONPATH=src python -m unittest discover -s tests -p 'test_mock_http_mcp.py' -v</code> and check the results.</li>
+<li><strong>Private test token:</strong> Generate a random token on the server with <code>python -c 'import secrets; print(secrets.token_urlsafe(48))'</code>. Store it in private service configuration, not in this webpage, GitHub or logs.</li>
+<li><strong>Enable mock mode:</strong> Configure <code>AGENTSTEERS_MCP_MOCK_ENABLED=1</code>, <code>AGENTSTEERS_MCP_MOCK_TOKEN</code>, <code>AGENTSTEERS_MCP_MOCK_HOST=mcp.agentsteers.com</code> and <code>AGENTSTEERS_MCP_MOCK_REPOS=scyllarusllc/agentsteers</code>.</li>
+<li><strong>Start separately:</strong> Under a dedicated non-root account, start the standalone WSGI app <code>agentsteers.mock_http_mcp:application</code> with Gunicorn on <code>127.0.0.1:8766</code>, using one worker and the project <code>src</code> Python path.</li>
+<li><strong>Expose HTTPS only after verification:</strong> Have Caddy forward the <code>mcp.agentsteers.com/mcp</code> route to that loopback service. Keep the normal website routes unchanged. Confirm TLS, Host and forwarded-protocol handling before changing the 503 prelaunch route.</li>
+<li><strong>Test externally:</strong> Expect HTTP 401 without the token. With the token, verify MCP <code>initialize</code>, <code>tools/list</code>, and the four mock tools: <code>submit_task</code>, <code>get_task_status</code>, <code>get_task_result</code>, and <code>cancel_task</code>. No Codex commands should execute.</li>
 </ol>
-<p>The planned endpoint is <code>https://mcp.agentsteers.com/mcp</code>. Availability and ChatGPT Voice compatibility are not yet confirmed.</p>
+<p>The planned endpoint is <code>https://mcp.agentsteers.com/mcp</code>. Public availability and ChatGPT Voice compatibility have not been confirmed. A successful website login does not authorize MCP access.</p>
+<p><strong>Rollback:</strong> Restore the MCP domain's Caddy 503 prelaunch configuration and stop the separate mock process. The website can remain online.</p>
 <p><a class="button secondary" href="https://github.com/scyllarusllc/agentsteers/blob/main/plan.md">View development plan ↗</a></p>
 <p class="footnote">No production commands are executed from this page. A successful website login is not an MCP connection.</p>
 </main>
