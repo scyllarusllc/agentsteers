@@ -16,6 +16,7 @@ import tempfile
 
 from install_frappe_dev import APP_SRC, APP_NAME, ROOT
 from publish_frappe import resolve_bench
+from yarn_environment import ensure_yarn
 
 PROD_SITE = "agentsteers.com"
 DEV_SITE = "agentsteers-dev.localhost"
@@ -95,6 +96,9 @@ def setup() -> None:
     prod = resolve_bench(PROD_SITE).resolve()
     check(DEV_BENCH != prod and DEV_BENCH != PROD_BENCH, "Refusing production Bench.")
     check(not DEV_BENCH.exists(), "Development Bench already exists; refusing to replace it.")
+    # Match make publish: validate working Yarn Classic (and prepend project-local
+    # executable to PATH if necessary) before Bench creates any dev directories.
+    ensure_yarn()
     cli = bench_cli(prod)
     branch = os.environ.get("AGENTSTEERS_FRAPPE_BRANCH", "version-15")
     check(branch.startswith("version-") and branch[8:].isdigit(), "Invalid Frappe branch.")
