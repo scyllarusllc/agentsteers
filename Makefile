@@ -57,6 +57,7 @@ mcp-mock-install:
 mcp-mock-test:
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mock_http_mcp.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_remote_mcp_guard.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mcp_mock_caddy.py' -v
 
 mcp-mock-start:
 	@set -eu; \
