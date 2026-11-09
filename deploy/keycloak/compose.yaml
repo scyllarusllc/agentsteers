@@ -1,0 +1,49 @@
+# Preparation only. Does not change the existing AgentSteers website or MCP Caddy routes.
+# Launch deliberately on an authorized host with: docker compose --env-file .env.auth -f deploy/keycloak/compose.yaml up -d
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KC_DB_PASSWORD:?Set KC_DB_PASSWORD in private .env.auth}
+    volumes:
+      - keycloak_postgres:/var/lib/postgresql/data
+    networks: [keycloak_internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    restart: unless-stopped
+    command:
+      - start
+      - --http-enabled=true
+      - --hostname=https://auth.agentsteers.com
+      - --proxy-headers=xforwarded
+      - --features=cimd,resource-indicators
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://postgres:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD:?Set KC_DB_PASSWORD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KC_BOOTSTRAP_ADMIN_USERNAME:?Set admin username}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KC_BOOTSTRAP_ADMIN_PASSWORD:?Set admin password}
+    # ONLY a locally reachable backend. TLS must terminate at a *reviewed*
+    # reverse-proxy hostname: auth.agentsteers.com (not mcp.agentsteers.com).
+    ports:
+      - "127.0.0.1:8780:8080"
+    networks: [keycloak_internal]
+
+networks:
+  keycloak_internal:
+
+volumes:
+  keycloak_postgres:
