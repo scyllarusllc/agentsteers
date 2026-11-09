@@ -8,11 +8,7 @@
 <link rel="stylesheet" href="/assets/agentsteers_frappe/css/styles.css?v=8c9d2838a8ae">
 </head>
 <body>
-<a class="skip" href="#main">Skip to content</a>
-<header class="site-header wrap">
-<a class="brand" href="/" aria-label="AgentSteers home"><span class="brand-icon">A↗</span> AgentSteers</a>
-<nav aria-label="Main"><a href="#how">How it works</a><a href="#why">Why AgentSteers</a><a href="https://github.com/scyllarusllc/agentsteers">GitHub ↗</a><a href="/user/account">Sign in / Account</a></nav>
-</header>
+{% include "agentsteers_frappe/www/includes/site_header.html" %}
 <main id="main">
 <section class="hero wrap">
 <p class="eyebrow"><span class="status-dot"></span> OPEN SOURCE · RELEASE CANDIDATE IN PROGRESS</p>
@@ -38,5 +34,5 @@
 <section class="wrap features" id="research"><p class="kicker">RESEARCH ROADMAP</p><h2>When should agents<br>work in parallel?</h2><p class="section-lead">We plan to compare sequential agents, asynchronous task handling, and independent workers on reproducible software-engineering tasks. The research will measure completion time, reliability, cost, resource contention and conflicting edits to learn when parallel execution helps—and when it does not.</p><p class="footnote">Research proposal, not a shipped multi-agent feature or validated performance result.</p></section>
 <section class="closing band"><div class="wrap"><p class="kicker">START WITH THE SOURCE</p><h2>Help shape the first release.</h2><p>Help validate the 60-second quick-start goal and the real-world reliability of permission-aware coding agents. Explore the source, try the development mock, and follow the integration work on GitHub.</p><a class="button primary" href="https://github.com/scyllarusllc/agentsteers">View the repository ↗</a></div></section>
 </main>
-<footer class="wrap footer"><span>© AgentSteers · Open-source prototype</span><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="https://github.com/scyllarusllc/agentsteers">GitHub</a></div></footer>
+{% include "agentsteers_frappe/www/includes/site_footer.html" %}
 </body></html>

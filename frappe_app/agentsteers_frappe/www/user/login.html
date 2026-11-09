@@ -2,16 +2,14 @@
 {% extends "templates/web.html" %}
 
 {% block head_include %}
-<link rel="stylesheet" href="/assets/agentsteers_frappe/css/user-login.css?v=1">
+<link rel="stylesheet" href="/assets/agentsteers_frappe/css/styles.css?v=8c9d2838a8ae">
+<link rel="stylesheet" href="/assets/agentsteers_frappe/css/user-login.css?v=2">
 {% endblock %}
 
 {% block page_content %}
 <div class="as-auth" data-design="agentsteers-user-login">
-  <header class="as-auth-nav">
-    <a class="as-auth-brand" href="/"><span class="as-auth-mark" aria-hidden="true">A↗</span> AgentSteers</a>
-    <a class="as-auth-back" href="/">Back to home <span aria-hidden="true">↗</span></a>
-  </header>
-  <main class="as-auth-grid">
+  {% include "agentsteers_frappe/www/includes/site_header.html" %}
+  <main id="main" class="as-auth-grid">
     <aside class="as-auth-story">
       <p class="as-auth-eyebrow"><span aria-hidden="true"></span> YOUR WORK. YOUR DIRECTION.</p>
       <h1>A little less typing.<br>A lot more <em>building.</em></h1>
@@ -73,7 +71,7 @@
       <noscript><p class="as-auth-notice">Enable JavaScript to sign in securely.</p></noscript>
     </div>
   </main>
-  <footer class="as-auth-footer"><span>Built for what’s next.</span><div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="/user/account">Account</a></div></footer>
+  {% include "agentsteers_frappe/www/includes/site_footer.html" %}
 </div>
 {% endblock %}
 

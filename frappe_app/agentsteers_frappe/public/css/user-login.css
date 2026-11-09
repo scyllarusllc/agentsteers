@@ -16,3 +16,9 @@ body:has(.as-auth) .container{max-width:none;padding:0}body:has(.as-auth) .page_
 .as-auth-footer{padding-block:22px;border-top:1px solid #202d40;color:#7e91a9;font-size:11px}.as-auth-footer>div{display:flex;gap:22px}
 @media(max-width:900px){.as-auth-grid{gap:45px}.as-auth-card{padding:30px}.as-auth-story h1{letter-spacing:-2px}}
 @media(max-width:700px){.as-auth-nav,.as-auth-footer{width:calc(100% - 40px)}.as-auth-nav{padding-block:24px}.as-auth-grid{width:min(440px,calc(100% - 40px));grid-template-columns:1fr;gap:30px;padding-block:30px 45px}.as-auth-story h1{font-size:38px}.as-auth-intro{margin-bottom:0}.as-auth-preview,.as-auth-boundary{display:none}.as-auth-eyebrow{margin-bottom:18px}.as-auth-card{padding:28px 24px;border-radius:16px}.as-auth-footer{align-items:flex-start;font-size:10px}.as-auth-footer>div{gap:14px}}
+
+/* The login page uses the same shared navigation/footer partials as every other page. */
+.as-auth .site-header,.as-auth .footer{flex-shrink:0}
+.as-auth .site-header{width:min(1100px,calc(100% - 48px));margin-inline:auto}
+.as-auth .footer{width:min(1100px,calc(100% - 48px));margin-inline:auto;border-top:1px solid #202d40}
+.as-auth .footer a:hover,.as-auth .site-header a:hover{color:#a9ef9b}
