@@ -1,5 +1,21 @@
 # AgentSteers Development Plan
 
+## 2026-11-10 — Public HTTPS Mock MCP release gates
+
+Owner requested public exposure. Keep the public route disabled until the leaked bearer secret is rotated and all security checks pass. An incomplete OAuth implementation must not be presented as valid OAuth connection. Do not enable real Codex CLI, shell execution, writes to Git, production deployment, or payroll data.
+
+- [x] Add optional OAuth protected-resource discovery helper and offline unit tests (source only; no running gateway change).
+- [ ] Revoke/rotate prior bearer token on the authorized host, using protected secret storage.
+- [ ] Run unit/security tests, including `PYTHONPATH=src python -m unittest discover -s tests -p 'test_oauth_discovery.py' -v`, and record results.
+- [ ] Confirm public DNS, TLS, Host/Origin checks, loopback-only backend, single-worker mock in-memory store, safe process supervision, network restrictions, and rollback; preserve unrelated website routes.
+- [ ] Confirm 401 without credentials and rejection of incorrect credentials, then initialize, tools/list and all four mock tools with a new secret via an authorized HTTPS client.
+- [ ] Complete real OAuth authorization-server setup, PKCE and token audience verification, resource discovery/challenge, per-tool scopes and server-side actor ownership before plugin OAuth sign-in.
+- [ ] Connect existing ChatGPT private plugin using verified OAuth and demonstrate ChatGPT Work web round trip.
+- [ ] Independently test iPad Voice; keep Codex execution disabled until a separate approved security review.
+
+Status: source changes are not proof of live deployment or completed tests.
+
+
 Updated: 2026-11-09 (Saipan time)
 
 ## Goal
