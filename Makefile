@@ -24,11 +24,11 @@ frappe-dev-auto:
 	@$(PYTHON) scripts/install_frappe_dev.py
 
 dev:
-	@$(PYTHON) scripts/dev_environment.py ensure
+	@BENCH_DISABLE_UV=1 $(PYTHON) scripts/dev_environment.py ensure
 	@$(PYTHON) scripts/run_frappe_dev.py
 
 dev-setup:
-	@$(PYTHON) scripts/dev_environment.py setup
+	@BENCH_DISABLE_UV=1 $(PYTHON) scripts/dev_environment.py setup
 
 dev-fast:
 	@$(PYTHON) scripts/run_frappe_dev.py
