@@ -62,15 +62,26 @@ class PrivateFrappeOAuthConfigTests(unittest.TestCase):
                 config.ensure_ready_for_start()
             setup.assert_not_called()
 
-    def test_invalid_existing_config_fails_without_overwriting(self):
-        invalid = dict(config.DEFAULTS, **{
+    def test_short_frappe_issued_secret_is_accepted(self):
+        complete = dict(config.DEFAULTS, **{
             "AGENTSTEERS_FRAPPE_CLIENT_ID": "real-client",
             "AGENTSTEERS_FRAPPE_CLIENT_SECRET": "short",
             "AGENTSTEERS_FRAPPE_SUBJECTS": "owner",
         })
+        with patch.object(config, "environment", return_value=complete), \
+             patch.object(config, "setup") as setup:
+            self.assertEqual(config.ensure_ready_for_start(), complete)
+            setup.assert_not_called()
+
+    def test_placeholder_secret_still_fails_without_overwriting(self):
+        invalid = dict(config.DEFAULTS, **{
+            "AGENTSTEERS_FRAPPE_CLIENT_ID": "real-client",
+            "AGENTSTEERS_FRAPPE_CLIENT_SECRET": "REPLACE_ME",
+            "AGENTSTEERS_FRAPPE_SUBJECTS": "owner",
+        })
         with patch.object(config, "environment", return_value=invalid), \
              patch.object(config, "setup") as setup:
-            with self.assertRaisesRegex(ValueError, "Client secret too short"):
+            with self.assertRaisesRegex(ValueError, "Unconfigured"):
                 config.ensure_ready_for_start()
             setup.assert_not_called()
 
