@@ -67,7 +67,7 @@ class FrappeAuthTests(unittest.TestCase):
                     make_verifier(claims(**values)).verify("Bearer valid-token")
 
     def test_header_rejected(self):
-        for header in (None, "", "Basic xyz", "Bearer ", "Bearer a b", "Bearer a\\nb"):
+        for header in (None, "", "Basic xyz", "Bearer ", "Bearer a b", "Bearer a\nb"):
             with self.subTest(header=header):
                 with self.assertRaises(AuthorizationError):
                     make_verifier(claims()).verify(header)
