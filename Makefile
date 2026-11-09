@@ -60,16 +60,16 @@ mcp-mock-test:
 
 mcp-mock-start:
 	@set -eu; \
-	if [ "${AGENTSTEERS_MCP_MOCK_ENABLED:-}" != "1" ]; then \
+	if [ "$${AGENTSTEERS_MCP_MOCK_ENABLED:-}" != "1" ]; then \
 		echo 'Set AGENTSTEERS_MCP_MOCK_ENABLED=1 in the private service environment.' >&2; exit 1; \
 	fi; \
-	if [ -z "${AGENTSTEERS_MCP_MOCK_TOKEN:-}" ] || [ "${#AGENTSTEERS_MCP_MOCK_TOKEN}" -lt 32 ]; then \
+	if [ -z "$${AGENTSTEERS_MCP_MOCK_TOKEN:-}" ] || [ "$${#AGENTSTEERS_MCP_MOCK_TOKEN}" -lt 32 ]; then \
 		echo 'Set a random AGENTSTEERS_MCP_MOCK_TOKEN of at least 32 characters.' >&2; exit 1; \
 	fi; \
-	if [ "${AGENTSTEERS_MCP_MOCK_HOST:-}" != "mcp.agentsteers.com" ]; then \
+	if [ "$${AGENTSTEERS_MCP_MOCK_HOST:-}" != "mcp.agentsteers.com" ]; then \
 		echo 'Set AGENTSTEERS_MCP_MOCK_HOST=mcp.agentsteers.com.' >&2; exit 1; \
 	fi; \
-	if [ -z "${AGENTSTEERS_MCP_MOCK_REPOS:-}" ]; then \
+	if [ -z "$${AGENTSTEERS_MCP_MOCK_REPOS:-}" ]; then \
 		echo 'Set AGENTSTEERS_MCP_MOCK_REPOS to an allowed owner/repository.' >&2; exit 1; \
 	fi; \
 	if [ ! -x "$(VENV_PYTHON)" ]; then \
