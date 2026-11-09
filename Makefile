@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
+.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev mcp-server mcp-check list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-server       Start independent loopback-only mock MCP HTTP server' 'make mcp-check        Check four MCP tools through the live loopback server' 'make mcp-dev          Alias for mcp-server' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py
@@ -36,7 +36,9 @@ dev-fast:
 dev-sync:
 	@$(PYTHON) scripts/dev_environment.py sync
 
-mcp-dev: install frappe-dev-auto
+mcp-dev: mcp-server
+
+mcp-server: install
 	@set -eu; \
 	token="$${AGENTSTEERS_DEV_TOKEN:-}"; \
 	if [ -z "$$token" ]; then \
@@ -47,6 +49,9 @@ mcp-dev: install frappe-dev-auto
 	$(VENV_PYTHON) scripts/restart_dev_port.py; \
 	printf '%s\\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
 	exec $(VENV_PYTHON) -m agentsteers.http_server
+
+mcp-check:
+	@$(PYTHON) scripts/check_mcp_local.py
 
 list:
 	@$(PYTHON) scripts/manage_website.py list
