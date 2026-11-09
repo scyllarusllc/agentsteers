@@ -99,7 +99,8 @@ def main(argv=None):
         backup = path.with_name(path.name + ".agentsteers-mcp-backup-" + now)
         shutil.copy2(path, backup)
         try:
-            shutil.copy2(staged, path)
+            # Preserve Caddyfile ownership and permissions (staging file is 0600).
+            shutil.copyfile(staged, path)
             run_caddy("reload", "--config", str(path), "--adapter", "caddyfile")
         except Exception:
             shutil.copy2(backup, path)
