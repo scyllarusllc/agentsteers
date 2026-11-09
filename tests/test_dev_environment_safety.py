@@ -139,9 +139,11 @@ class DevEnvironmentSafetyTests(unittest.TestCase):
                     dev_environment.bench_cli(root / "frappe-bench")
 
     def test_diagnostics_do_not_modify_permissions(self):
-        with patch.object(dev_environment, "ROOT") as root, \
-             patch.object(dev_environment, "DEV_BENCH") as dev, \
-             patch.object(dev_environment, "PROD_BENCH") as prod, \
+        import tempfile
+        with tempfile.TemporaryDirectory() as directory, \
+             patch.object(dev_environment, "ROOT", Path(directory)), \
+             patch.object(dev_environment, "DEV_BENCH", Path(directory) / "dev"), \
+             patch.object(dev_environment, "PROD_BENCH", Path(directory) / "prod"), \
              patch.object(dev_environment.shutil, "which", return_value=None), \
              patch.object(dev_environment.subprocess, "run") as cmd:
             dev_environment.diagnose_permissions()
