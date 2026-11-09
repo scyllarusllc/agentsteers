@@ -13,10 +13,16 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def main() -> int:
-    # Use the dedicated development Bench by default; never discover production.\n    os.environ.setdefault("AGENTSTEERS_BENCH_DIR", str(ROOT / "frappe-dev-bench"))\n    bench = find_bench()
+    os.environ.setdefault("AGENTSTEERS_BENCH_DIR", str(ROOT / "frappe-dev-bench"))
+    bench = find_bench()
     if bench is None:
         raise RuntimeError("No development Bench found. Set AGENTSTEERS_BENCH_DIR to a dedicated development Bench.")
-    site = select_site(bench)\n    from dev_environment import DEV_BENCH, DEV_SITE, validate, isolate_site\n    if bench.resolve() != DEV_BENCH or site != DEV_SITE:\n        raise RuntimeError("Only the isolated AgentSteers development Bench/site may be served.")\n    validate()\n    isolate_site()
+    site = select_site(bench)
+    from dev_environment import DEV_BENCH, DEV_SITE, validate, isolate_site
+    if bench.resolve() != DEV_BENCH or site != DEV_SITE:
+        raise RuntimeError("Only the isolated AgentSteers development Bench/site may be served.")
+    validate()
+    isolate_site()
     if site == "agentsteers.com":
         raise RuntimeError("Refusing to serve production site.")
     # Only use a dedicated development Bench. Do not reuse the managed
