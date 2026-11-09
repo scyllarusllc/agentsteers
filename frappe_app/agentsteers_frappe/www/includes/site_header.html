@@ -1,5 +1,6 @@
 {# Render the navigation from the current Frappe session; never infer sign-in from a browser flag. #}
 {% set agentsteers_signed_in = frappe.session.user != "Guest" %}
+{% set agentsteers_display_name = (frappe.get_fullname(frappe.session.user) or frappe.session.user) if agentsteers_signed_in else "" %}
 <a class="skip" href="#main">Skip to content</a>
 <header class="site-header wrap">
   <a class="brand" href="/" aria-label="AgentSteers home"><span class="brand-icon" aria-hidden="true">A↗</span> AgentSteers</a>
@@ -8,7 +9,7 @@
     <a href="/#why">Why AgentSteers</a>
     <a href="https://github.com/scyllarusllc/agentsteers">GitHub ↗</a>
     {% if agentsteers_signed_in %}
-    <a href="/user/account">Account</a>
+    <a href="/user/account" aria-label="Your account">{{ agentsteers_display_name | e }}</a>
     <a href="/?cmd=web_logout">Sign out</a>
     {% else %}
     <a href="/user/login?redirect-to=%2Fuser%2Faccount">Sign in</a>
