@@ -1,5 +1,10 @@
 # AgentSteers
 
+### Default-off OAuth WSGI configuration (prototype only)
+
+`src/agentsteers/oauth_mock_wsgi.py` is now a separate WSGI entrypoint; it is **not connected to Caddy** or the running `make mcp` test session. The application returns HTTP 503 unless `AGENTSTEERS_OAUTH_MOCK_ENABLED=1` and all server-only settings are present: `AGENTSTEERS_OAUTH_ISSUER`, `AGENTSTEERS_OAUTH_AUDIENCE` (must exactly equal `https://mcp.agentsteers.com/mcp`), `AGENTSTEERS_OAUTH_JWKS_URL`, `AGENTSTEERS_OAUTH_AUTHORIZATION_SERVER`, `AGENTSTEERS_OAUTH_SUBJECTS` and `AGENTSTEERS_OAUTH_REPOS`. The URLs must point to a **real configured OAuth provider**, not an example domain. No secrets or access tokens belong in Git. A real authorization-code/PKCE login, trusted proxy routing and live ChatGPT client verification are still pending. Standalone OAuth WSGI tests are in `tests/test_oauth_mock_wsgi.py`.
+
+
 ## OAuth Mock MCP development — 2026-11-10
 
 A separate **opt-in OAuth resource-server application** now exists at `src/agentsteers/oauth_mock_mcp.py`. It uses `create_app(verifier=..., resource=..., authorization_server=..., repositories=...)`, and composes protected-resource discovery, JWT-verifier injection, actor-scoped mock task state, repository allowlisting and required scopes `agentsteers:read`, `agentsteers:submit`, and `agentsteers:cancel`. The four MCP mock tools retain their existing request shapes. The OAuth app never invokes Codex or a shell, and is **not installed in the public reverse proxy** or the legacy bearer-token `make mcp` service. User-supplied OAuth client identifiers, task owner IDs, and approval flags are not trusted.
