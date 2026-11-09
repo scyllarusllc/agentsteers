@@ -1,5 +1,10 @@
 # AgentSteers
 
+### OAuth authorization-server setup preparation (2026-11-10)
+
+A test-environment setup runbook is available at [docs/oauth-authorization-server.md](docs/oauth-authorization-server.md). It recommends a separate, existing OAuth provider (Keycloak is a candidate) for Authorization Code + PKCE S256, client registration, access-token audience `https://mcp.agentsteers.com/mcp`, and the three Mock MCP scopes. `scripts/check_oauth_metadata.py` checks a locally saved, non-secret authorization-server discovery JSON for issuer, HTTPS endpoints, S256 and selected client mode; `tests/test_oauth_metadata.py` contains negative cases. **This is preparation, not an installed authorization server or a connected ChatGPT plugin.** Do not put login credentials or tokens into the repository.
+
+
 ### Default-off OAuth WSGI configuration (prototype only)
 
 `src/agentsteers/oauth_mock_wsgi.py` is now a separate WSGI entrypoint; it is **not connected to Caddy** or the running `make mcp` test session. The application returns HTTP 503 unless `AGENTSTEERS_OAUTH_MOCK_ENABLED=1` and all server-only settings are present: `AGENTSTEERS_OAUTH_ISSUER`, `AGENTSTEERS_OAUTH_AUDIENCE` (must exactly equal `https://mcp.agentsteers.com/mcp`), `AGENTSTEERS_OAUTH_JWKS_URL`, `AGENTSTEERS_OAUTH_AUTHORIZATION_SERVER`, `AGENTSTEERS_OAUTH_SUBJECTS` and `AGENTSTEERS_OAUTH_REPOS`. The URLs must point to a **real configured OAuth provider**, not an example domain. No secrets or access tokens belong in Git. A real authorization-code/PKCE login, trusted proxy routing and live ChatGPT client verification are still pending. Standalone OAuth WSGI tests are in `tests/test_oauth_mock_wsgi.py`.
