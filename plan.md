@@ -42,3 +42,10 @@ The owner approved a public HTTPS test endpoint secured with a generated Bearer 
 ## Next implementation step
 
 Add the mock-only, token-protected HTTP application and its negative tests while leaving production Caddy and `/mcp` routing disabled. Then prepare opt-in deployment instructions and run the offline test suite.
+
+## Website MCP navigation (2026-11-09)
+
+- The shared Frappe site header now links to `/mcp-connection` on every page.
+- The page is informational: it displays **Not verified**, never claims an active MCP session, and does not accept or expose credentials.
+- Website authentication is separate from MCP authorization. The mock HTTP server and public reverse-proxy activation remain independent follow-up work.
+- Deploy the website update separately, then verify the new route and responsive shared header. No automatic deployment is performed by GitHub commits.
