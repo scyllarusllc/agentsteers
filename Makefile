@@ -55,6 +55,7 @@ mcp-mock-install:
 	@$(VENV_PYTHON) -m pip install 'gunicorn>=21,<24'
 
 mcp-mock-test:
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_codex_readiness.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_rotate_mock_token.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mock_http_mcp.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_remote_mcp_guard.py' -v
