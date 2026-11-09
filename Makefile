@@ -4,10 +4,10 @@ PYTHON ?= python3.11
 VENV := .venv
 VENV_PYTHON := $(VENV)/bin/python
 
-.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
+.PHONY: help setup install frappe-install frappe-dev-auto dev dev-setup dev-fast dev-sync mcp-dev mcp-mock-install mcp-mock-test mcp-mock-start list start stop restart check-google-login fix-google-login publish publish-hot test pull git-pull-force
 
 help:
-	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
+	@printf '%s\n' 'make setup            Initialise the managed Frappe Bench and dedicated site interactively' 'make install          Create local Python environment and install dependencies' 'make dev              Auto-setup missing isolated dev Bench, then serve locally' 'make dev-setup        Create isolated development Bench and site (interactive)' 'make dev-fast         Start development site without database sync' 'make dev-sync         Disabled: production database copies are prohibited' 'make mcp-dev          Start the previous local mock MCP service' 'make mcp-mock-install Install Gunicorn for isolated HTTP mock testing' 'make mcp-mock-test   Run Mock HTTP MCP and authentication boundary tests' 'make mcp-mock-start  Start token-protected Mock HTTP MCP on localhost:8766 (foreground)' 'make list             Show production website service status' 'make start            Start production website service' 'make stop             Stop production website (confirmation required)' 'make restart          Restart production website service' 'make check-google-login  Check Frappe public URL for Google OAuth' 'make fix-google-login    Confirm, back up and correct Frappe public URL' 'make frappe-install   Require local Bench; install/update dedicated dev app' 'make publish          Check, confirm, back up and deploy the Frappe website' 'make publish-hot  Refresh live website assets/caches and gracefully reload workers' 'make test             Run Python unit tests locally' 'make pull             Fast-forward the current branch from its upstream' 'make git-pull-force   Confirm, back up, and reset local main to origin/main'
 
 setup:
 	@$(PYTHON) scripts/setup_managed_bench.py
@@ -47,6 +47,37 @@ mcp-dev: install frappe-dev-auto
 	$(VENV_PYTHON) scripts/restart_dev_port.py; \
 	printf '%s\\n' 'AgentSteers mock MCP: http://127.0.0.1:8765/mcp' 'Loopback development only; no Codex execution or public exposure.'; \
 	exec $(VENV_PYTHON) -m agentsteers.http_server
+
+
+# Separate MCP test service; does NOT deploy a Caddy route or execute Codex.
+# Set secrets only in the server's private service environment.
+mcp-mock-install:
+	@$(VENV_PYTHON) -m pip install 'gunicorn>=21,<24'
+
+mcp-mock-test:
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mock_http_mcp.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_remote_mcp_guard.py' -v
+
+mcp-mock-start:
+	@set -eu; \
+	if [ "${AGENTSTEERS_MCP_MOCK_ENABLED:-}" != "1" ]; then \
+		echo 'Set AGENTSTEERS_MCP_MOCK_ENABLED=1 in the private service environment.' >&2; exit 1; \
+	fi; \
+	if [ -z "${AGENTSTEERS_MCP_MOCK_TOKEN:-}" ] || [ "${#AGENTSTEERS_MCP_MOCK_TOKEN}" -lt 32 ]; then \
+		echo 'Set a random AGENTSTEERS_MCP_MOCK_TOKEN of at least 32 characters.' >&2; exit 1; \
+	fi; \
+	if [ "${AGENTSTEERS_MCP_MOCK_HOST:-}" != "mcp.agentsteers.com" ]; then \
+		echo 'Set AGENTSTEERS_MCP_MOCK_HOST=mcp.agentsteers.com.' >&2; exit 1; \
+	fi; \
+	if [ -z "${AGENTSTEERS_MCP_MOCK_REPOS:-}" ]; then \
+		echo 'Set AGENTSTEERS_MCP_MOCK_REPOS to an allowed owner/repository.' >&2; exit 1; \
+	fi; \
+	if [ ! -x "$(VENV_PYTHON)" ]; then \
+		echo 'Missing local virtual environment. Run make install first.' >&2; exit 1; \
+	fi; \
+	$(VENV_PYTHON) -m gunicorn --version >/dev/null || { echo 'Run make mcp-mock-install first.' >&2; exit 1; }; \
+	printf '%s\\n' 'Starting Mock MCP on 127.0.0.1:8766 (one worker; no Codex). Stop with Ctrl+C.'; \
+	exec env PYTHONPATH=src $(VENV_PYTHON) -m gunicorn --bind 127.0.0.1:8766 --workers 1 --access-logfile - agentsteers.mock_http_mcp:application
 
 list:
 	@$(PYTHON) scripts/manage_website.py list
