@@ -1,5 +1,17 @@
 # AgentSteers Development Plan
 
+## 2026-11-10 — Frappe OAuth Mock MCP command and architecture
+
+- [x] Add `FrappeTokenVerifier` with server-side token introspection and dedicated-client/owner/scope checks (source only; live claims still unverified).
+- [x] Add default-off Frappe OAuth WSGI entry point and separate `make mcp-auth-check` / `make mcp-auth` localhost startup commands.
+- [x] Add Frappe OAuth offline tests, and wire the test module into `make mcp-mock-test`.
+- [x] Replace the outdated README Mermaid architecture diagram with ChatGPT → existing Frappe OAuth → AgentSteers Mock MCP, marking Codex disabled.
+- [ ] Verify latest CI test run, fix any reported failures and run the tests on the authorized Linux host.
+- [ ] Confirm installed Frappe OAuth introspection payload, supported token claims, PKCE S256 and OAuth discovery/client registration compatibility. Current verifier requires active/exp/iss/sub/client_id/aud/scope; this is intentionally fail-closed and may need adjusting to the actual Frappe release.
+- [ ] Perform real ChatGPT OAuth login and HTTPS MCP end-to-end test. Current `make mcp-auth` only listens on loopback and does not change Caddy.
+- [ ] Keep the legacy `make mcp` bearer-test behavior unchanged and real Codex CLI disabled.
+
+
 ## ACTIVE DECISION — 2026-11-10: Frappe OAuth instead of Keycloak / Cloudflare
 
 The owner selected the existing **Frappe** installation as AgentSteers' OAuth authorization provider for this test phase. **Keycloak deployment work is on hold** and Cloudflare Access is not selected. Previously committed `deploy/keycloak/` files and the Keycloak setup guide are historical/optional references, **not a deployment requirement or an instruction to start Keycloak**. Do not remove or alter existing Frappe services, Caddy routes, or the running bearer-token `make mcp` service without separate tested migration.
