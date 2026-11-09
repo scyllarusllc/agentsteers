@@ -1,5 +1,17 @@
 # AgentSteers Development Plan
 
+### 2026-11-10 — Mock bearer rotation command
+
+- [x] Implement `make rotate`, backed by `scripts/rotate_mock_token.py`, to generate and atomically save a new private Mock MCP token with no secret output.
+- [x] Add `tests/test_rotate_mock_token.py` to the `make mcp-mock-test` suite.
+- [ ] Run the tests on the authorized Linux server and verify the stopped old session no longer accepts its prior token.
+- [ ] Operator sequence: stop `make mcp`, confirm Caddy rollback and backend shutdown, run `make rotate` as the same non-root owner, update private client credentials, then restart `make mcp` after tests.
+- [ ] For a separately supervised Mock service using environment variable `AGENTSTEERS_MCP_MOCK_TOKEN`, rotate its separate secret and restart it; the local `make rotate` file is not necessarily that service's credential.
+- [ ] Verify unauthenticated and old credentials are rejected before exposing or re-enabling any public endpoint. OAuth remains a separate incomplete workstream.
+
+`make rotate` changes a local protected token file only. It does not change production Caddy, start/stop services or deploy the GitHub commit.
+
+
 ## 2026-11-10 — Public HTTPS Mock MCP release gates
 
 Owner requested public exposure. Keep the public route disabled until the leaked bearer secret is rotated and all security checks pass. An incomplete OAuth implementation must not be presented as valid OAuth connection. Do not enable real Codex CLI, shell execution, writes to Git, production deployment, or payroll data.
