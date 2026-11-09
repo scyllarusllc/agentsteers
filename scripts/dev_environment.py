@@ -106,36 +106,23 @@ def setup() -> None:
     run([str(DEV_BENCH / "env/bin/python"), "-m", "pip", "install", "-e", str(APP_SRC)], DEV_BENCH)
     run([dev_cli, "--site", DEV_SITE, "install-app", APP_NAME], DEV_BENCH)
     isolate_site()
-    print("Production data may contain private records and integration credentials.", flush=True)
-    print("Only authorize copying if this Bench remains private and loopback-only.", flush=True)
-    if input("Type ENABLE LOCAL DEV SYNC to allow automatic refresh on make dev: ").strip() == "ENABLE LOCAL DEV SYNC":
-        marker = DEV_BENCH / ".agentsteers-dev-sync-enabled"
-        marker.write_text("approved\\n", encoding="utf-8")
-        marker.chmod(0o600)
-    print("Development site initialized. Next: make dev-sync or make dev-fast.", flush=True)
-
-
-def defaults_file(directory: Path, cfg: dict) -> Path:
-    # MySQL reads credentials from a restricted file, never from argv or logs.
-    path = directory / ("mysql-" + str(len(list(directory.iterdir()))) + ".cnf")
-    user = cfg.get("db_user") or cfg["db_name"]
-    def esc(v: str) -> str:
-        return str(v).replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
-    path.write_text('[client]\nuser="' + esc(user) + '"\npassword="' +
-                    esc(cfg["db_password"]) + '"\nhost="127.0.0.1"\n', encoding="utf-8")
-    path.chmod(0o600)
-    return path
+    print("Development site initialized with a fresh database. Production data sync is disabled.", flush=True)
 
 
 def sync() -> None:
-    prod, p, d = validate()
-    check(shutil.which("mariadb-dump") or shutil.which("mysqldump"),
-          "MariaDB dump utility missing.")
-    check(shutil.which("mariadb") or shutil.which("mysql"), "MariaDB client missing.")
-    marker = DEV_BENCH / ".agentsteers-dev-sync-enabled"
-    check(marker.is_file() and not marker.is_symlink() and
-          marker.read_text(encoding="utf-8").strip() == "approved",
-          "Automatic production-data copy not authorized. Re-run setup review or "
-          "create an owner-only approval marker after reviewing the privacy risk.")
-    print("Refreshing dedicated development database from production backup.", flush=True)
+    """Fail closed: production records/credentials must never be cloned into dev."""
+    raise RuntimeError("Production database sync is disabled. Use a fresh isolated development site and synthetic test data.")
 
+
+if __name__ == "__main__":
+    try:
+        command = sys.argv[1] if len(sys.argv) == 2 else ""
+        if command == "setup":
+            setup()
+        elif command == "sync":
+            sync()
+        else:
+            raise RuntimeError("Usage: dev_environment.py [setup|sync]")
+    except (RuntimeError, OSError, subprocess.CalledProcessError) as exc:
+        print(f"Development environment: {exc}", file=sys.stderr)
+        raise SystemExit(1)
