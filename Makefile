@@ -55,6 +55,7 @@ mcp-mock-install:
 	@$(VENV_PYTHON) -m pip install 'gunicorn>=21,<24'
 
 mcp-mock-test:
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_mock_wsgi.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_mock_mcp.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_discovery.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_security.py' -v
