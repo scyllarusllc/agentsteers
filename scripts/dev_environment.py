@@ -109,6 +109,22 @@ def setup() -> None:
     print("Development site initialized with a fresh database. Production data sync is disabled.", flush=True)
 
 
+def ensure() -> None:
+    """Create a fresh dev Bench only when absent; never repair or overwrite one."""
+    check(os.geteuid() != 0, "Run as the non-root Bench owner.")
+    check(not DEV_BENCH.is_symlink(), "Refusing symlinked development Bench.")
+    if not DEV_BENCH.exists():
+        print("Isolated development Bench missing; starting one-time setup.", flush=True)
+        setup()
+    else:
+        check(DEV_BENCH.is_dir(),
+              "Existing development Bench path is not a directory; refusing to modify it.")
+        print("Using existing isolated development Bench.", flush=True)
+    # Fail closed for incomplete or cross-wired development sites.
+    validate()
+    print("Isolated development Bench verified. Starting loopback server.", flush=True)
+
+
 def sync() -> None:
     """Fail closed: production records/credentials must never be cloned into dev."""
     raise RuntimeError("Production database sync is disabled. Use a fresh isolated development site and synthetic test data.")
@@ -121,8 +137,10 @@ if __name__ == "__main__":
             setup()
         elif command == "sync":
             sync()
+        elif command == "ensure":
+            ensure()
         else:
-            raise RuntimeError("Usage: dev_environment.py [setup|sync]")
+            raise RuntimeError("Usage: dev_environment.py [setup|sync|ensure]")
     except (RuntimeError, OSError, subprocess.CalledProcessError) as exc:
         print(f"Development environment: {exc}", file=sys.stderr)
         raise SystemExit(1)
