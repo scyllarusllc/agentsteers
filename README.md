@@ -282,3 +282,32 @@ System packages, running MariaDB/Redis services, Node/Yarn, Python 3.11 and prod
 ### Yarn permission fallback (CentOS)
 
 `make publish` now verifies Node.js and an executable Yarn Classic (v1) before launching Frappe Bench. If the global `yarn` command is absent, broken or returns `Permission denied`, the script uses `npm` (without sudo) to install `yarn@1.22.22` in the ignored `.node-tools/` directory and prepends its bin directory to child process `PATH`. It does **not** chmod globally installed files or change ownership. If Node.js/npm themselves cannot execute, or the project filesystem has `noexec`, a manual host permission/mount fix is still required. `make publish-check` remains read-only and does not install tools. If the previous failed `bench init` left an incomplete `frappe-bench/`, the setup refuses to erase it automatically; inspect the partial directory before deciding how to repair it. Avoid `sudo make publish`.
+
+
+### Independent local MCP server smoke test
+
+The Frappe website development command `make dev` is separate from the mock
+MCP HTTP server. To run only the mock MCP server, open two terminals in the
+repository root and export **the same, private** 32+ character development
+token in each terminal (do not paste it into logs or commit it):
+
+```sh
+export AGENTSTEERS_DEV_TOKEN="$(python3 -c 'import secrets; print(secrets.token_urlsafe(48))')"
+make mcp-server
+```
+
+In the second terminal, set `AGENTSTEERS_DEV_TOKEN` to that same value using
+your existing secret-sharing method, then run:
+
+```sh
+make mcp-check
+```
+
+The check performs a real MCP initialize and tools/list handshake, verifies
+that `submit_task`, `get_task_status`, `get_task_result`, and
+`cancel_task` are advertised, and exits nonzero if the server or credentials
+are unavailable. It intentionally does **not** submit a task. Both commands
+are loopback-only: `http://127.0.0.1:8765/mcp`. `make mcp-dev` is an alias
+for `make mcp-server`. Neither command deploys the public HTTPS MCP
+endpoint or starts Codex. **Never** proxy this dev server to the public
+Internet or treat its bearer-token guard as production OAuth authorization.
