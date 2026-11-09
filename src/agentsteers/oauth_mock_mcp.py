@@ -100,7 +100,7 @@ class OAuthMockMCP:
             return _rpc(start_response, request_id, result={})
         if method == "tools/list":
             return _rpc(start_response, request_id, result={"tools": [
-                {"name": name, **details} for name, details in METHODS.items()
+                {"name": name, **details, "_meta": {"securitySchemes": [\n                    {"type": "oauth2", "scopes": [ACTION_SCOPE[name]]}\n                ]}} for name, details in METHODS.items()
             ]})
         if method != "tools/call":
             return _rpc(start_response, request_id, error=(-32601, "Method not found"))
@@ -113,7 +113,14 @@ class OAuthMockMCP:
                 any(not isinstance(x, str) for x in arguments.values())):
             return _rpc(start_response, request_id, error=(-32602, "Invalid arguments"))
         if ACTION_SCOPE[name] not in principal.scopes:
-            outcome = {"ok": False, "error": "forbidden"}
+            challenge = (f'Bearer resource_metadata="https://{self.host}/.well-known/oauth-protected-resource", '
+                         f'error="insufficient_scope", error_description="Required MCP scope missing", '
+                         f'scope="{ACTION_SCOPE[name]}"')
+            return _rpc(start_response, request_id, result={
+                "content": [{"type": "text", "text": "Authorization required for this tool."}],
+                "_meta": {"mcp/www_authenticate": [challenge]},
+                "isError": True
+            })
         else:
             actor = JobPrincipal(
                 subject=principal.subject, repositories=self.repositories,
