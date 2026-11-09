@@ -112,16 +112,16 @@ mcp:
 # Operator must supply AGENTSTEERS_FRAPPE_* values privately and independently
 # review Frappe's OAuth token claims, issuer, scopes and client registration.
 mcp-auth-setup:
-	@$(PYTHON) scripts/frappe_mcp_auth_config.py setup
+	@$(PYTHON) -m scripts.frappe_mcp_auth_config setup
 
 mcp-auth-check:
-	@$(PYTHON) scripts/frappe_mcp_auth_config.py check
+	@$(PYTHON) -m scripts.frappe_mcp_auth_config check
 
 mcp-auth: mcp-auth-start
 
 mcp-auth-start: mcp-auth-check
 	@$(VENV_PYTHON) -m gunicorn --version >/dev/null 2>&1 || { echo 'Gunicorn missing. Run make mcp-mock-install.' >&2; exit 1; }
-	@$(PYTHON) scripts/frappe_mcp_auth_config.py start
+	@$(PYTHON) -m scripts.frappe_mcp_auth_config start
 
 # Rotate the local private Mock MCP token; refuses if the local mock listener is active.
 rotate:
