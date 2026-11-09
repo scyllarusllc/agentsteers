@@ -1,5 +1,15 @@
 # AgentSteers Development Plan
 
+### 2026-11-10 — Prepare OAuth authorization server
+
+- [x] Document a provider-based authorization server setup in `docs/oauth-authorization-server.md`, including Keycloak candidate and ChatGPT client registration options.
+- [x] Add offline discovery metadata checker and corresponding unit tests.
+- [ ] Select and deploy a real HTTPS issuer; configure a test realm, one owner account, PKCE S256, client registration, JWT resource audience and `scope` claims.
+- [ ] Run the metadata checker and unit tests against the actual issuer; review the issuer and public URLs without sharing secrets.
+- [ ] Finish per-tool OAuth security declarations/error metadata in the MCP gateway; connect and test ChatGPT web, not real Codex.
+- [ ] Keep existing bearer-only `make mcp` route unchanged until independent OAuth integration is validated.
+
+
 ### OAuth WSGI configuration gate (2026-11-10)
 
 - [x] Add default-off `oauth_mock_wsgi.py` with fixed MCP audience, required server-side issuer/JWKS, owner and repo allowlists, and HTTP 503 when not configured.
