@@ -1,5 +1,14 @@
 # AgentSteers
 
+## OAuth Mock MCP development — 2026-11-10
+
+A separate **opt-in OAuth resource-server application** now exists at `src/agentsteers/oauth_mock_mcp.py`. It uses `create_app(verifier=..., resource=..., authorization_server=..., repositories=...)`, and composes protected-resource discovery, JWT-verifier injection, actor-scoped mock task state, repository allowlisting and required scopes `agentsteers:read`, `agentsteers:submit`, and `agentsteers:cancel`. The four MCP mock tools retain their existing request shapes. The OAuth app never invokes Codex or a shell, and is **not installed in the public reverse proxy** or the legacy bearer-token `make mcp` service. User-supplied OAuth client identifiers, task owner IDs, and approval flags are not trusted.
+
+`tests/test_oauth_mock_mcp.py` exercises protected-resource metadata, unauthenticated challenge, four tools, mock task lifecycle, cross-actor isolation, scope denial, repository allowlisting, HTTPS/Host/Origin checks and unknown-tool rejection using a **fake verifier only**. `make mcp-mock-test` also invokes OAuth discovery and JWT verifier test modules. **No automated test pass is asserted** until tests actually run on the host/CI.
+
+To activate the new OAuth route later, choose an actual OAuth 2.1 authorization server that supports Authorization Code + PKCE, publish real authorization-server metadata, configure a real `AccessTokenVerifier` with trusted issuer/audience/JWKS and an owner-subject allowlist, and intentionally mount the new WSGI app behind a reviewed loopback-only HTTPS proxy. The test authorization server URL is not a deployed service. Authenticate and verify `initialize`, `tools/list`, `submit_task`, `get_task_status`, `get_task_result` and `cancel_task` in ChatGPT web before considering the bridge connected. iPad Voice and actual Codex execution remain separate future milestones.
+
+
 ### Real Codex execution readiness (2026-11-10)
 
 The owner has requested progress toward enabling real Codex CLI tasks and reports that the temporary MCP mock service is operating. **The server status was not independently verified in this GitHub development session.** The public `mock_http_mcp.py` remains mock-only, with no command execution.
