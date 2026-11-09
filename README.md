@@ -8,10 +8,10 @@ Run these commands from the repository root:
 
 ```bash
 make pull
-make mcp-auth-setup
-make mcp-auth-check
 make mcp-auth
 ```
+
+`make mcp-auth` now performs the full local sequence: loads the private configuration, **skips setup if complete**, or starts the one-time interactive setup if required fields are missing. It then runs structural configuration checks and starts the localhost MCP service. Missing credentials must be entered from an actual Frappe OAuth Client; the command never invents secrets or registers a client. An incomplete configuration in a noninteractive environment fails safely with an explanatory error, and invalid or unsafe existing configuration is rejected rather than silently overwritten. `make mcp-auth-setup` and `make mcp-auth-check` remain available separately for manual maintenance.
 
 `make mcp-auth-setup` interactively collects the **real** Frappe Client ID and secret, allowed Frappe user subject identifiers and repository allowlist. It defaults the issuer to `https://agentsteers.com`, repository to `scyllarusllc/agentsteers` and MCP resource to `https://mcp.agentsteers.com/mcp`. It does **not** invent credentials or register a Frappe OAuth client. It writes to `~/.config/agentsteers/frappe-oauth.env` with permissions 0600, outside Git, and never prints the secret. The check and launch targets read this private file automatically; explicit environment variables can override configured settings. `make mcp-auth-check` reports all missing required fields together. Existing `make mcp` and Caddy routing remain unchanged; real Codex stays disabled. A structural preflight pass is **not** a real ChatGPT OAuth login verification.
 
