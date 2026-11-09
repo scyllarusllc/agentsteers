@@ -10,6 +10,8 @@ import os
 import pwd
 from pathlib import Path
 import secrets
+import shlex
+import signal
 import socket
 import subprocess
 import sys
@@ -19,7 +21,7 @@ from mcp_mock_caddy import replace_site, run_caddy, TEMPLATE
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = ROOT / ".venv" / "bin" / "python"
-CADDY = Path(os.environ.get("CADDY_CONFIG", "/etc/caddy/Caddyfile"))
+CADDY = Path(os.environ.get("CADDY_CONFIG") or ("/tpdata/caddy/config.json" if Path("/tpdata/caddy/config.json").is_file() else "/etc/caddy/Caddyfile"))
 SECRET_FILE = Path.home() / ".config" / "agentsteers" / "mock-mcp.token"
 HOST = "mcp.agentsteers.com"
 PORT = 8766
@@ -39,7 +41,7 @@ def check_venv():
 
 def test_suite():
     for filename in ("test_mock_http_mcp.py", "test_remote_mcp_guard.py",
-                     "test_mcp_mock_caddy.py"):
+                     "test_mcp_mock_caddy.py", "test_mcp_json_session.py"):
         env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
         subprocess.run([str(PYTHON), "-m", "unittest", "discover",
                         "-s", "tests", "-p", filename, "-v"],
@@ -99,6 +101,60 @@ def write_proxy(original, new_config):
     return backup
 
 
+def json_session(token):
+    """Docker JSON support; root supervises route rollback while backend stays non-root."""
+    if CADDY != Path('/tpdata/caddy/config.json'):
+        raise RuntimeError('Custom JSON config requires explicit adapter support; refusing to guess.')
+    if os.geteuid() == 0:
+        raise RuntimeError('Run make mcp as the non-root application owner.')
+    if not sys.stdin.isatty():
+        raise RuntimeError('Interactive terminal required for temporary Caddy routing.')
+    print('Detected Docker Caddy JSON: /tpdata/caddy/config.json', flush=True)
+    print('Caddy admin API is disabled here. Activation and restoration restart only '
+          'trojan-panel-caddy; other websites may see a brief connection interruption.', flush=True)
+    if input('Type ENABLE MOCK MCP to start the temporary session: ').strip() != 'ENABLE MOCK MCP':
+        print('Cancelled without changing Caddy.')
+        return 0
+    # Fail before spawning when another service already owns our backend port.
+    with socket.socket() as probe:
+        probe.bind(('127.0.0.1', PORT))
+    env = dict(os.environ, PYTHONPATH=str(ROOT / 'src'),
+               AGENTSTEERS_MCP_MOCK_ENABLED='1', AGENTSTEERS_MCP_MOCK_TOKEN=token,
+               AGENTSTEERS_MCP_MOCK_HOST=HOST,
+               AGENTSTEERS_MCP_MOCK_REPOS='scyllarusllc/agentsteers')
+    proc = subprocess.Popen([str(PYTHON), '-m', 'gunicorn', '--bind', f'127.0.0.1:{PORT}',
+                             '--workers', '1', 'agentsteers.mock_http_mcp:application'],
+                            cwd=ROOT, env=env, start_new_session=True)
+    helper = None
+    try:
+        ready(proc)
+        command = shlex.join([sys.executable, str(ROOT / 'scripts/mcp_json_session.py'),
+                              '--pid', str(proc.pid), '--uid', str(os.geteuid())])
+        print('Linux root authentication is needed to manage the root-owned Caddy config. '
+              'The mock backend remains non-root.', flush=True)
+        # su handles password input through the terminal. Root supervision lasts
+        # until the session ends so rollback needs no second password prompt.
+        helper = subprocess.Popen(['su', '--pty', '-c', command])
+        try:
+            code = helper.wait()
+        except KeyboardInterrupt:
+            print('Stopping session; waiting for Caddy route restoration...', flush=True)
+            code = helper.wait()
+        if code:
+            raise RuntimeError('Privileged Caddy session failed; inspect its diagnostic above.')
+    finally:
+        if helper is not None and helper.poll() is None:
+            os.kill(proc.pid, signal.SIGTERM)
+            helper.wait()
+        if proc.poll() is None:
+            os.killpg(proc.pid, signal.SIGTERM)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                os.killpg(proc.pid, signal.SIGKILL); proc.wait()
+    return 0
+
+
 def main():
     # Read-only startup diagnostics; do not print credentials or tokens.
     print(f"MCP diagnostic - working directory (pwd): {Path.cwd()}", flush=True)
@@ -108,7 +164,9 @@ def main():
     test_suite()
     token = token_from_private_file()
     if not CADDY.is_file():
-        raise RuntimeError(f"Missing real Caddyfile: {CADDY}")
+        raise RuntimeError(f"Missing active Caddy configuration: {CADDY}")
+    if CADDY.suffix.lower() == ".json":
+        return json_session(token)
     original = CADDY.read_text()
     candidate = replace_site(original, TEMPLATE.read_text())
     # We only promise temporary activation from the 503 prelaunch state.

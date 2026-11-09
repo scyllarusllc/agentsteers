@@ -174,3 +174,31 @@ Offline regression tests:
 ```sh
 PYTHONPATH=src python3.11 -m unittest discover -s tests -p 'test_embedded_mcp_wsgi.py' -v
 ```
+
+### `make mcp` on this server's Docker Caddy installation
+
+`CADDY_CONFIG` is auto-detected as `/tpdata/caddy/config.json` here, rather than
+assuming `/etc/caddy/Caddyfile`. `make mcp` runs the mock-only backend as the
+non-root application owner on `127.0.0.1:8766`. After `ENABLE MOCK MCP`, Linux
+root authentication through `su --pty` starts a privileged route supervisor.
+This handles the root-owned JSON without relaxing file permissions or Docker
+access for `frappe`. No token is printed or passed to the privileged helper.
+
+The supervisor accepts only the known dedicated MCP routes, refuses to displace
+an active old backend on port 8765, preserves all other JSON settings, validates
+with the running Caddy image, backs up the original config, and changes only the
+MCP host to the guarded mock. It preserves the bind-mounted config inode and
+sets Host and forwarded HTTPS correctly. Since this Caddy instance has its admin
+API disabled, activation and restoration restart only `trojan-panel-caddy`;
+other websites can see a brief interruption at those two points. No certificates,
+firewall settings, Frappe service, production databases or Codex execution change.
+
+Ctrl+C, ordinary termination, or backend exit restores the exact original config
+without another root password prompt. Concurrent config edits cause a refusal to
+overwrite and a manual recovery message. Forced termination (SIGKILL), host loss,
+or a failed Docker restart requires inspecting the root-owned `.mcp-session-*`
+backup; this is a temporary test session, not a persistent deployment. The token
+remains in `~/.config/agentsteers/mock-mcp.token` with private permissions. The
+Caddyfile-based workflow remains available for other installations. For this
+JSON installation use `make mcp` for activation/restoration, rather than the
+persistent `mcp-mock-proxy-apply` target.

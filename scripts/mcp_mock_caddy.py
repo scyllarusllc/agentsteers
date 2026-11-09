@@ -62,10 +62,19 @@ def run_caddy(*args):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__)
-    p.add_argument("--config", default="/etc/caddy/Caddyfile", help="Existing main Caddyfile")
+    p.add_argument("--config", default="/tpdata/caddy/config.json" if Path("/tpdata/caddy/config.json").is_file() else "/etc/caddy/Caddyfile", help="Active Caddy JSON or Caddyfile")
     p.add_argument("--apply", action="store_true", help="Apply after validation and explicit confirmation")
     args = p.parse_args(argv)
     path = Path(args.config).resolve()
+    if path.suffix.lower() == '.json':
+        if args.apply:
+            raise RuntimeError('Docker JSON changes use the supervised temporary session: run make mcp. '
+                               'It handles root authentication, validation, backup and route restoration.')
+        print('Docker JSON adapter: temporary mcp.agentsteers.com/mcp -> 127.0.0.1:8766.')
+        print('Preserves Host=mcp.agentsteers.com and sets X-Forwarded-Proto=https for the guarded mock.')
+        print('Other host routes are preserved. Run make mcp to validate/activate after confirmation.')
+        print('This installation requires restarting Caddy alone for activation and restoration.')
+        return 0
     original = path.read_text()
     replacement = TEMPLATE.read_text()
     candidate = replace_site(original, replacement)

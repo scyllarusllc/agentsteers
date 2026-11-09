@@ -58,6 +58,7 @@ mcp-mock-test:
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mock_http_mcp.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_remote_mcp_guard.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mcp_mock_caddy.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mcp_json_session.py' -v
 
 mcp-mock-start:
 	@set -eu; \
@@ -82,8 +83,9 @@ mcp-mock-start:
 
 
 # Caddy is managed independently of the website deploy.
-# Set CADDY_CONFIG only if your main Caddyfile lives elsewhere.
-CADDY_CONFIG ?= /etc/caddy/Caddyfile
+# Auto-detect this server's Docker JSON configuration; allow an explicit override.
+CADDY_CONFIG ?= $(if $(wildcard /tpdata/caddy/config.json),/tpdata/caddy/config.json,/etc/caddy/Caddyfile)
+export CADDY_CONFIG
 
 mcp-mock-proxy-preview:
 	@$(PYTHON) scripts/mcp_mock_caddy.py --config "$(CADDY_CONFIG)"
