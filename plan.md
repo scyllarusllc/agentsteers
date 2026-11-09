@@ -1,5 +1,16 @@
 # AgentSteers Development Plan
 
+### 2026-11-10 — Isolated Keycloak deployment template and preflight
+
+- [x] Added `deploy/keycloak/compose.yaml`, `deploy/keycloak/env.example`, and `deploy/keycloak/README.md` for an operator-reviewed localhost-only Keycloak/PostgreSQL test stack. Includes explicit OAuth client, PKCE, resource-indicator and Caddy proxy instructions.
+- [x] Added `scripts/check_keycloak_env.py` and `tests/test_keycloak_env.py` to reject sample/weak or world-readable secrets before Compose.
+- [x] Added OAuth per-tool security schemes and insufficient-scope reauthorization metadata to the mock resource server with tests.
+- [ ] Reconfirm current GitHub CI result on latest commit.
+- [ ] Install Docker/Keycloak on authorized CentOS host, create private configuration, and configure DNS/TLS/reverse proxy **on that host**. GitHub commits alone cannot perform these steps.
+- [ ] Finish issuer/realm, client registration, token audience/scopes and real ChatGPT OAuth login; verify against a live MCP endpoint.
+- [ ] Keep old `make mcp` and Codex CLI execution unchanged.
+
+
 ### 2026-11-10 — Prepare OAuth authorization server
 
 - [x] Document a provider-based authorization server setup in `docs/oauth-authorization-server.md`, including Keycloak candidate and ChatGPT client registration options.
