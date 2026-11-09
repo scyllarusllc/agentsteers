@@ -1,5 +1,6 @@
 """Development Bench must not inherit production data or launch with invalid code."""
 import ast
+import os
 from pathlib import Path
 import sys
 import unittest
@@ -63,6 +64,25 @@ class DevEnvironmentSafetyTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "incomplete"):
                 dev_environment.ensure()
             setup.assert_not_called()
+
+    def test_make_dev_disables_uv_before_bench_setup(self):
+        with patch.dict(os.environ, {"BENCH_DISABLE_UV": "0"}):
+            with patch.object(dev_environment.os, "geteuid", return_value=1000), \
+                 patch.object(dev_environment, "DEV_BENCH") as path, \
+                 patch.object(dev_environment, "setup") as setup, \
+                 patch.object(dev_environment, "validate"):
+                path.is_symlink.return_value = False
+                path.exists.return_value = False
+                dev_environment.ensure()
+                self.assertEqual(os.environ["BENCH_DISABLE_UV"], "1")
+                setup.assert_called_once()
+
+    def test_direct_setup_disables_uv(self):
+        with patch.dict(os.environ, {"BENCH_DISABLE_UV": "0"}), \
+             patch.object(dev_environment.os, "geteuid", return_value=0):
+            with self.assertRaisesRegex(RuntimeError, "root"):
+                dev_environment.setup()
+            self.assertEqual(os.environ["BENCH_DISABLE_UV"], "1")
 
     def test_no_production_data_import_commands(self):
         text = (SCRIPTS / "dev_environment.py").read_text(encoding="utf-8")
