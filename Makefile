@@ -111,14 +111,14 @@ mcp:
 # Operator must supply AGENTSTEERS_FRAPPE_* values privately and independently
 # review Frappe's OAuth token claims, issuer, scopes and client registration.
 mcp-auth-check:
-	@AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1 PYTHONPATH=src $(VENV_PYTHON) scripts/check_frappe_mcp_auth.py
+	@AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1 AGENTSTEERS_FRAPPE_ISSUER="${AGENTSTEERS_FRAPPE_ISSUER:-https://agentsteers.com}" PYTHONPATH=src $(VENV_PYTHON) scripts/check_frappe_mcp_auth.py
 
 mcp-auth: mcp-auth-start
 
 mcp-auth-start: mcp-auth-check
 	@$(VENV_PYTHON) -m gunicorn --version >/dev/null 2>&1 || { echo 'Gunicorn missing. Run make mcp-mock-install.' >&2; exit 1; }
 	@printf '%s\n' 'Starting Frappe OAuth Mock MCP on 127.0.0.1:8767 only; no Caddy changes and no Codex.'
-	@exec env AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1 PYTHONPATH=src $(VENV_PYTHON) -m gunicorn --bind 127.0.0.1:8767 --workers 1 agentsteers.frappe_oauth_wsgi:application
+	@exec env AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1 AGENTSTEERS_FRAPPE_ISSUER="${AGENTSTEERS_FRAPPE_ISSUER:-https://agentsteers.com}" PYTHONPATH=src $(VENV_PYTHON) -m gunicorn --bind 127.0.0.1:8767 --workers 1 agentsteers.frappe_oauth_wsgi:application
 
 # Rotate the local private Mock MCP token; refuses if the local mock listener is active.
 rotate:
