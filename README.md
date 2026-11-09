@@ -1,9 +1,24 @@
 # AgentSteers
 
+### One-time Frappe OAuth configuration (private, on the server)
+
+Create a real OAuth Client in your Frappe instance at **Setup → Integrations → OAuth Client**, using Authorization Code and the exact ChatGPT redirect URI shown during connector setup. Confirm PKCE S256, scopes and metadata compatibility with your installed Frappe release; do not assume a client registered for a generic app automatically works with ChatGPT.
+
+Run these commands from the repository root:
+
+```bash
+make pull
+make mcp-auth-setup
+make mcp-auth-check
+make mcp-auth
+```
+
+`make mcp-auth-setup` interactively collects the **real** Frappe Client ID and secret, allowed Frappe user subject identifiers and repository allowlist. It defaults the issuer to `https://agentsteers.com`, repository to `scyllarusllc/agentsteers` and MCP resource to `https://mcp.agentsteers.com/mcp`. It does **not** invent credentials or register a Frappe OAuth client. It writes to `~/.config/agentsteers/frappe-oauth.env` with permissions 0600, outside Git, and never prints the secret. The check and launch targets read this private file automatically; explicit environment variables can override configured settings. `make mcp-auth-check` reports all missing required fields together. Existing `make mcp` and Caddy routing remain unchanged; real Codex stays disabled. A structural preflight pass is **not** a real ChatGPT OAuth login verification.
+
 ### Frappe OAuth MCP testing commands (not yet publicly routed)
 
-- `make mcp-auth-check`: automatically sets `AGENTSTEERS_FRAPPE_OAUTH_ENABLED=1` and defaults `AGENTSTEERS_FRAPPE_ISSUER` to `https://agentsteers.com` (the configured production Frappe site), unless explicitly overridden; checks other required settings without network calls or printing credentials.
-- `make mcp-auth`: use the same automatic OAuth enablement and default issuer, validate configuration, and start the **separate loopback-only** Frappe OAuth Mock MCP listener on `127.0.0.1:8767`, using a single Gunicorn worker. It does not edit Caddy or enable Codex.
+- `make mcp-auth-check`: loads the local private Frappe OAuth config, enables OAuth, supplies safe defaults and checks all required settings without contacting Frappe or printing credentials.
+- `make mcp-auth`: uses the same private config and defaults, validates configuration, and starts the **separate loopback-only** Frappe OAuth Mock MCP listener on `127.0.0.1:8767`, using a single Gunicorn worker. It does not edit Caddy or enable Codex.
 - `make mcp`: unchanged temporary **static Bearer** Mock MCP test session; it is **not** Frappe OAuth.
 - `make mcp-mock-test`: offline test modules, including Frappe introspection tests.
 
