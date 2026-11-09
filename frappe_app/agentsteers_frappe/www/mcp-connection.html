@@ -1,0 +1,35 @@
+<!-- no-cache -->
+{% set signed_in = frappe.session.user != "Guest" %}
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>MCP Connection — AgentSteers</title>
+<link rel="stylesheet" href="/assets/agentsteers_frappe/css/styles.css?v=8c9d2838a8ae">
+</head>
+<body>
+{% include "agentsteers_frappe/www/includes/site_header.html" %}
+<main id="main" class="wrap account-page">
+<p class="eyebrow">MCP CONNECTION</p>
+<h1>Connect AgentSteers MCP</h1>
+<p class="lead">Configure and test the future connection between ChatGPT and AgentSteers.</p>
+<p><strong>Connection status:</strong> Not verified. This page does not establish an MCP session or inspect live server health.</p>
+{% if signed_in %}
+<p class="account-identity">Website account: <strong>{{ frappe.session.user | e }}</strong></p>
+{% else %}
+<p>To manage your website account, <a href="/user/login?redirect-to=%2Fmcp-connection">sign in</a>. Website sign-in alone does not authorize MCP access.</p>
+{% endif %}
+<h2>Test connection plan</h2>
+<ol>
+<li>Deploy a separate HTTPS mock-only MCP endpoint after local tests.</li>
+<li>Configure a private Bearer token on the server; never paste a token into this page or GitHub.</li>
+<li>Connect an MCP-capable client and verify initialize, tool discovery, and mock task lifecycle.</li>
+<li>Enable isolated Codex execution only after separate authorization and worker testing.</li>
+</ol>
+<p>The planned endpoint is <code>https://mcp.agentsteers.com/mcp</code>. Availability and ChatGPT Voice compatibility are not yet confirmed.</p>
+<p><a class="button secondary" href="https://github.com/scyllarusllc/agentsteers/blob/main/plan.md">View development plan ↗</a></p>
+<p class="footnote">No production commands are executed from this page. A successful website login is not an MCP connection.</p>
+</main>
+{% include "agentsteers_frappe/www/includes/site_footer.html" %}
+</body></html>
