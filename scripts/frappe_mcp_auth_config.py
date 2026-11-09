@@ -103,6 +103,22 @@ def setup():
     print("This only validates configuration structure; real OAuth login is not yet verified.")
 
 
+def ensure_ready_for_start():
+    """Reuse a complete config, or set up missing values interactively once."""
+    env = environment()
+    missing = [key for key in REQUIRED if not env.get(key, "").strip()]
+    if missing:
+        if not sys.stdin.isatty():
+            raise ValueError(
+                "Missing required Frappe OAuth configuration: " + ", ".join(missing)
+                + ". Run make mcp-auth in an interactive terminal to set up securely.")
+        print("Frappe OAuth configuration is incomplete; starting one-time private setup.", flush=True)
+        setup()
+        env = environment()
+    preflight(env)
+    return env
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=("setup", "check", "start"))
@@ -111,12 +127,13 @@ def main():
         if action == "setup":
             setup()
             return 0
-        env = environment()
-        preflight(env)
         if action == "check":
+            preflight(environment())
             print("Frappe OAuth MCP configuration: structural checks passed.")
             print("No live Frappe token introspection, ChatGPT login, or public routing verified.")
             return 0
+        env = ensure_ready_for_start()
+        print("Frappe OAuth MCP configuration: structural checks passed.", flush=True)
         print("Starting Frappe OAuth Mock MCP on localhost:8767 only; no Caddy changes or Codex.", flush=True)
         os.execvpe(".venv/bin/python", [".venv/bin/python", "-m", "gunicorn",
                     "--bind", "127.0.0.1:8767", "--workers", "1",
