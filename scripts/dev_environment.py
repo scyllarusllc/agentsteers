@@ -87,6 +87,8 @@ def isolate_site() -> None:
 
 
 def setup() -> None:
+    # Match make publish: use stdlib venv + pip, not uv (may be noexec).
+    os.environ["BENCH_DISABLE_UV"] = "1"
     check(os.geteuid() != 0, "Do not initialize Bench as root.")
     check(sys.stdin.isatty(), "Interactive terminal required for initial setup.")
     check(not DEV_BENCH.is_symlink(), "Refusing symlinked dev Bench.")
@@ -111,6 +113,8 @@ def setup() -> None:
 
 def ensure() -> None:
     """Create a fresh dev Bench only when absent; never repair or overwrite one."""
+    # Apply before any child Bench command, including first-time init.
+    os.environ["BENCH_DISABLE_UV"] = "1"
     check(os.geteuid() != 0, "Run as the non-root Bench owner.")
     check(not DEV_BENCH.is_symlink(), "Refusing symlinked development Bench.")
     if not DEV_BENCH.exists():
