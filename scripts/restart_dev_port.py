@@ -16,7 +16,7 @@ PORT = 8765
 ROOT = Path(__file__).resolve().parent.parent
 
 
-def listeners() -> set[str]:
+def listeners(port: int = PORT) -> set[str]:
     """Linux socket inode(s) in TCP LISTEN state for the development port."""
     result: set[str] = set()
     for name in ("tcp", "tcp6"):
@@ -28,10 +28,10 @@ def listeners() -> set[str]:
             fields = line.split()
             if len(fields) > 9 and fields[3] == "0A":
                 try:
-                    port = int(fields[1].rsplit(":", 1)[1], 16)
+                    listener_port = int(fields[1].rsplit(":", 1)[1], 16)
                 except ValueError:
                     continue
-                if port == PORT:
+                if listener_port == port:
                     result.add(fields[9])
     return result
 

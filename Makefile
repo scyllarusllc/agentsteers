@@ -59,6 +59,7 @@ mcp-mock-test:
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_remote_mcp_guard.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mcp_mock_caddy.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_mcp_json_session.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_stop_mock_mcp.py' -v
 
 mcp-mock-start:
 	@set -eu; \

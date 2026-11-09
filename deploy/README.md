@@ -202,3 +202,10 @@ remains in `~/.config/agentsteers/mock-mcp.token` with private permissions. The
 Caddyfile-based workflow remains available for other installations. For this
 JSON installation use `make mcp` for activation/restoration, rather than the
 persistent `mcp-mock-proxy-apply` target.
+
+Before starting a new MCP mock backend, `make mcp` frees port 8766 only when all
+listener processes match this checkout's mock Gunicorn app and belong to the
+current user. It stops the verified master gracefully (then escalates only the
+same verified processes if necessary) and waits for a previous session to finish
+restoring Caddy before activating the new route. Unknown owners or unrelated
+applications are never killed. Port 8765 and other services are not touched.

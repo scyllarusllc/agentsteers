@@ -18,6 +18,7 @@ import sys
 import time
 
 from mcp_mock_caddy import replace_site, run_caddy, TEMPLATE
+from stop_mock_mcp import stop_previous_mock
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = ROOT / ".venv" / "bin" / "python"
@@ -41,7 +42,7 @@ def check_venv():
 
 def test_suite():
     for filename in ("test_mock_http_mcp.py", "test_remote_mcp_guard.py",
-                     "test_mcp_mock_caddy.py", "test_mcp_json_session.py"):
+                     "test_mcp_mock_caddy.py", "test_mcp_json_session.py", "test_stop_mock_mcp.py"):
         env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
         subprocess.run([str(PYTHON), "-m", "unittest", "discover",
                         "-s", "tests", "-p", filename, "-v"],
@@ -115,7 +116,8 @@ def json_session(token):
     if input('Type ENABLE MOCK MCP to start the temporary session: ').strip() != 'ENABLE MOCK MCP':
         print('Cancelled without changing Caddy.')
         return 0
-    # Fail before spawning when another service already owns our backend port.
+    stop_previous_mock()
+    # Confirm the port is free immediately before spawning.
     with socket.socket() as probe:
         probe.bind(('127.0.0.1', PORT))
     env = dict(os.environ, PYTHONPATH=str(ROOT / 'src'),
@@ -167,6 +169,7 @@ def main():
         raise RuntimeError(f"Missing active Caddy configuration: {CADDY}")
     if CADDY.suffix.lower() == ".json":
         return json_session(token)
+    stop_previous_mock()
     original = CADDY.read_text()
     candidate = replace_site(original, TEMPLATE.read_text())
     # We only promise temporary activation from the 503 prelaunch state.
