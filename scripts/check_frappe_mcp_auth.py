@@ -35,8 +35,9 @@ def validate(env):
     for key in ("AGENTSTEERS_FRAPPE_SUBJECTS", "AGENTSTEERS_FRAPPE_REPOS"):
         if not all(part.strip() for part in env[key].split(",")):
             raise ValueError(f"Invalid {key}")
-    if len(env["AGENTSTEERS_FRAPPE_CLIENT_SECRET"]) < 16:
-        raise ValueError("Client secret too short")
+    # Frappe controls the issued credential length. Do not reject a real
+    # non-empty OAuth client secret solely because it is shorter than 16 chars.
+    # A missing, placeholder, or malformed secret is rejected above.
     return True
 
 
