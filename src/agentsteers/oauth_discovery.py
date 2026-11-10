@@ -34,7 +34,11 @@ class OAuthDiscovery:
         self.auth_server = authorization_server
         self.scopes = scopes
         self.host = resource_url.netloc.lower()
-        self.metadata_path = "/.well-known/oauth-protected-resource"
+        # RFC 9728 inserts the well-known segment before the resource path.
+        # Preserve the origin-level URL for older clients that use the
+        # location from legacy WWW-Authenticate challenges.
+        self.metadata_path = "/.well-known/oauth-protected-resource" + resource_url.path
+        self.legacy_metadata_path = "/.well-known/oauth-protected-resource"
 
     @staticmethod
     def _send(start_response, status, payload, *, content_type="application/json"):
@@ -50,7 +54,7 @@ class OAuthDiscovery:
                 environ.get("HTTP_HOST", "").lower() != self.host):
             return self._send(start_response, "403 Forbidden", b'{"error":"untrusted_transport"}')
         path = environ.get("PATH_INFO")
-        if path == self.metadata_path:
+        if path in (self.metadata_path, self.legacy_metadata_path):
             if environ.get("REQUEST_METHOD") != "GET":
                 return self._send(start_response, "405 Method Not Allowed",
                                   b'{"error":"method_not_allowed"}')
@@ -72,6 +76,8 @@ def oauth_challenge_headers(*, resource: str, scopes: tuple[str, ...] = ()) -> l
     parsed = urlsplit(resource)
     if parsed.scheme != "https" or not parsed.netloc or parsed.path != "/mcp":
         raise ValueError("Expected HTTPS MCP resource")
-    metadata = f"{parsed.scheme}://{parsed.netloc}/.well-known/oauth-protected-resource"
+    # RFC 9728: insert the well-known path between the origin and /mcp.
+    metadata = (f"{parsed.scheme}://{parsed.netloc}"
+                f"/.well-known/oauth-protected-resource{parsed.path}")
     scope_part = f', scope="{" ".join(scopes)}"' if scopes else ""
     return [("WWW-Authenticate", f'Bearer resource_metadata="{metadata}"{scope_part}')]
