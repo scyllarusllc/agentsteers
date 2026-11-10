@@ -1,5 +1,25 @@
 # AgentSteers
 
+## Frappe OAuth discovery preflight (offline)
+
+The Frappe-specific metadata preflight checks authorization-code flow, PKCE
+S256, the expected Frappe authorization/token/introspection endpoints, and
+confidential-client authentication for opaque access tokens. Unlike the
+generic JWT preflight, it does **not** require a `jwks_uri`.
+
+Fetch the **public, non-secret** OAuth authorization-server metadata JSON from
+your separately authorized Frappe installation, save it locally, then run:
+
+```sh
+python3 scripts/check_frappe_oauth_metadata.py metadata.json --issuer https://YOUR-FRAPPE-HOST
+```
+
+Use `--registration dcr` only if that Frappe installation explicitly
+advertises dynamic client registration. This check performs no network calls,
+accepts no credentials, and **does not prove ChatGPT login works**.
+The exact behavior of the intended installed Frappe v17 release must still
+be verified. Keep the private OAuth listener off the public route.
+
 ## Frappe native OAuth introspection compatibility (development-only)
 
 AgentSteers currently keeps **strict** introspection checks as the default. A
