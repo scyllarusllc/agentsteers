@@ -17,6 +17,7 @@ from agentsteers.oauth_security import AuthorizationError, Principal
 MAX_TOKEN_LENGTH = 4096
 MAX_RESPONSE_BYTES = 32768
 ACTION_SCOPES = frozenset(("agentsteers:read", "agentsteers:submit", "agentsteers:cancel"))
+CLAIM_MODES = frozenset(("strict", "frappe_native"))
 
 
 def _valid_https(url):
@@ -37,7 +38,7 @@ class FrappeTokenVerifier:
 
     def __init__(self, *, issuer: str, client_id: str, client_secret: str,
                  allowed_subjects, required_scopes=ACTION_SCOPES, timeout=4,
-                 opener=None):
+                 opener=None, claim_mode="strict"):
         if not _valid_https(issuer):
             raise ValueError("HTTPS Frappe issuer required")
         if not isinstance(client_id, str) or not client_id.strip() or not client_secret:
@@ -46,10 +47,13 @@ class FrappeTokenVerifier:
             raise ValueError("Invalid client credentials")
         if not allowed_subjects:
             raise ValueError("Explicit Frappe owner allowlist required")
+        if claim_mode not in CLAIM_MODES:
+            raise ValueError("Unsupported Frappe introspection claim mode")
         self.issuer = issuer
         self.client_id = client_id
         self._secret = client_secret
         self.allowed_subjects = frozenset(allowed_subjects)
+        self.claim_mode = claim_mode
         self.required_scopes = frozenset(required_scopes)
         self.timeout = timeout
         self._opener = opener or urlopen
@@ -93,21 +97,36 @@ class FrappeTokenVerifier:
         if issued is not None and (not isinstance(issued, (int, float))
                                    or isinstance(issued, bool) or issued > now + 60):
             raise AuthorizationError("Invalid issue time")
-        if claims.get("iss") != self.issuer:
+        # Frappe's native introspection response may omit iss and aud. In the
+        # explicitly enabled native mode, the HTTPS endpoint plus authenticated
+        # dedicated OAuth client anchors trust. Never accept a *mismatching*
+        # claim when one is present; do not silently enable native mode.
+        if "iss" not in claims:
+            if self.claim_mode == "strict":
+                raise AuthorizationError("Missing token issuer")
+        elif claims["iss"] != self.issuer:
             raise AuthorizationError("Wrong token issuer")
         subject = claims.get("sub")
         if not isinstance(subject, str) or subject not in self.allowed_subjects:
             raise AuthorizationError("Unknown token owner")
         if claims.get("client_id") != self.client_id:
             raise AuthorizationError("Wrong OAuth client")
-        audience = claims.get("aud")
-        audiences = (audience,) if isinstance(audience, str) else audience
-        if not isinstance(audiences, (list, tuple)) or self.client_id not in audiences:
-            raise AuthorizationError("Wrong token audience")
+        if "aud" not in claims:
+            if self.claim_mode == "strict":
+                raise AuthorizationError("Missing token audience")
+        else:
+            audience = claims["aud"]
+            audiences = (audience,) if isinstance(audience, str) else audience
+            if not isinstance(audiences, (list, tuple)) or self.client_id not in audiences:
+                raise AuthorizationError("Wrong token audience")
         scope = claims.get("scope")
         if not isinstance(scope, str):
             raise AuthorizationError("Invalid token scopes")
         scopes = frozenset(scope.split())
+        # Frappe only supplies the authenticated user subject in its native
+        # introspection response when openid was granted. Keep that binding.
+        if self.claim_mode == "frappe_native" and "openid" not in scopes:
+            raise AuthorizationError("Frappe OpenID subject binding required")
         # Do not elevate Frappe's 'openid all' to AgentSteers MCP permissions.
         if not scopes.intersection(self.required_scopes):
             raise AuthorizationError("MCP scopes missing")
