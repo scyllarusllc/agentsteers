@@ -57,6 +57,10 @@ mcp-mock-install:
 mcp-mock-test:
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_frappe_auth_config.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_frappe_mcp_auth.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_frappe_native_introspection.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_frappe_v17_oauth_contract.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_frappe_oauth_discovery.py' -v
+	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_frappe_native_mcp_roundtrip.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_metadata.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_mock_wsgi.py' -v
 	@PYTHONPATH=src $(VENV_PYTHON) -m unittest discover -s tests -p 'test_oauth_mock_mcp.py' -v
