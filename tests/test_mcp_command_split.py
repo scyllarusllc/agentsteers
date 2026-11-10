@@ -9,7 +9,7 @@ class MCPCommandSplitTests(unittest.TestCase):
     def test_make_targets_are_separate(self):
         source = (ROOT / "Makefile").read_text()
         self.assertIn("mcp-mock:\n\t@$(PYTHON) scripts/run_mcp_mock_session.py", source)
-        self.assertIn("mcp:\n\t@PYTHONPATH=src $(PYTHON) scripts/run_mcp_oauth_session.py", source)
+        self.assertIn("mcp: mcp-bridge-test\n\t@PYTHONPATH=src $(PYTHON) scripts/run_mcp_oauth_session.py", source)
 
     def test_oauth_startup_fails_closed(self):
         from agentsteers.oauth_bridge_core import RESOURCE
