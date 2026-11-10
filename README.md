@@ -1,5 +1,33 @@
 # AgentSteers
 
+## Frappe native OAuth introspection compatibility (development-only)
+
+AgentSteers currently keeps **strict** introspection checks as the default. A
+separate, explicit `frappe_native` mode supports Frappe responses that report
+`active`, `exp`, `client_id`, `scope` and an OpenID `sub` but omit `iss`
+and `aud`. Source inspection of Frappe's **develop** branch suggests this
+format; it is **not** confirmation of a live Frappe v17 installation.
+
+To try this mode on a **private test host only**, configure
+`AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT=frappe_native` through
+`make mcp-auth-setup` or the private service environment (never Git).
+The default is `strict`. The native mode still requires:
+
+- Authenticated HTTPS token introspection using a dedicated confidential Frappe
+  OAuth client, with the returned `client_id` matching that client.
+- `active=true`, a future `exp`, a nonempty allowed `sub`, and a scope set
+  including `openid` and at least one explicit `agentsteers:*` permission.
+- If `iss` or `aud` *is* returned, it must match the configured issuer or
+  dedicated client. `openid all` never grants AgentSteers task permission.
+- Owner and repository allowlists; all available MCP actions remain mock-only.
+
+**Do not publicly route this listener** until the actual Frappe v17 instance
+has been independently checked for client-authenticated introspection,
+PKCE S256, redirect URI registration, metadata/client-registration support,
+valid and expired token behavior, and ChatGPT's live login and tool calls.
+The code does not register OAuth clients, supply credentials, connect a
+running server, or run Codex.
+
 ### One-time Frappe OAuth configuration (private, on the server)
 
 Create a real OAuth Client in your Frappe instance at **Setup → Integrations → OAuth Client**, using Authorization Code and the exact ChatGPT redirect URI shown during connector setup. Confirm PKCE S256, scopes and metadata compatibility with your installed Frappe release; do not assume a client registered for a generic app automatically works with ChatGPT.

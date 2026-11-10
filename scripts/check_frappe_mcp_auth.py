@@ -32,6 +32,8 @@ def validate(env):
         raise ValueError("Frappe issuer must be a trusted HTTPS URL without trailing slash")
     if env["AGENTSTEERS_FRAPPE_MCP_RESOURCE"] != RESOURCE:
         raise ValueError("MCP resource mismatch")
+    if env.get("AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT", "strict") not in ("strict", "frappe_native"):
+        raise ValueError("Unsupported Frappe introspection format")
     for key in ("AGENTSTEERS_FRAPPE_SUBJECTS", "AGENTSTEERS_FRAPPE_REPOS"):
         if not all(part.strip() for part in env[key].split(",")):
             raise ValueError(f"Invalid {key}")
