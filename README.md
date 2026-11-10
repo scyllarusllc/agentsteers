@@ -18,6 +18,27 @@ actual deployed Frappe authorization-server metadata, client registration,
 PKCE, and token introspection on an authorized private test system before
 making the protected MCP route publicly reachable.
 
+## Public OAuth discovery probe (read-only)
+
+After reviewing and deploying the public OAuth metadata routes separately,
+check **only public, non-secret HTTPS discovery documents** with:
+
+```sh
+AGENTSTEERS_FRAPPE_ISSUER=https://agentsteers.com make mcp-auth-public-probe
+```
+
+Or use `python3 -m scripts.probe_public_oauth --issuer https://agentsteers.com`.
+Replace the example issuer with the actual configured HTTPS Frappe issuer.
+The probe performs two bounded unauthenticated GET requests, refuses redirects,
+and validates the RFC 9728 MCP metadata plus Frappe OAuth Authorization Code,
+PKCE S256, and confidential-token-introspection metadata. It prints no secrets,
+does not send credentials, issue tokens, change routing, or execute Codex.
+
+A successful public metadata probe **does not establish that a Frappe login
+or ChatGPT connector is working**. An unreachable or unconfigured public route
+should fail closed. Only expose this route after separately authorized
+server-side review; continue to keep real Codex execution disabled.
+
 ## Frappe OAuth discovery preflight (offline)
 
 The Frappe-specific metadata preflight checks authorization-code flow, PKCE
