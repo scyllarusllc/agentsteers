@@ -36,6 +36,22 @@ class OAuthDiscoveryTests(unittest.TestCase):
         self.assertEqual(doc["authorization_servers"], ["https://auth.agentsteers.com"])
         self.assertIn("agentsteers:submit", doc["scopes_supported"])
 
+    def test_path_scoped_rfc9728_discovery_and_legacy_compatibility(self):
+        scoped_path = "/.well-known/oauth-protected-resource/mcp"
+        status, headers, scoped = self.request(scoped_path)
+        self.assertEqual(status, "200 OK")
+        self.assertEqual(headers["Cache-Control"], "no-store")
+        document = json.loads(scoped)
+        self.assertEqual(document["resource"], "https://mcp.agentsteers.com/mcp")
+        self.assertEqual(document["authorization_servers"], ["https://auth.agentsteers.com"])
+        # Old origin-level metadata remains available and describes the
+        # exact same protected resource.
+        legacy_status, _, legacy = self.request("/.well-known/oauth-protected-resource")
+        self.assertEqual(legacy_status, "200 OK")
+        self.assertEqual(json.loads(legacy), document)
+        self.assertEqual(self.request(scoped_path, method="POST")[0],
+                         "405 Method Not Allowed")
+
     def test_pass_through(self):
         self.assertEqual(self.request("/mcp")[0], "204 No Content")
 
@@ -59,7 +75,7 @@ class OAuthDiscoveryTests(unittest.TestCase):
         value = dict(oauth_challenge_headers(
             resource="https://mcp.agentsteers.com/mcp",
             scopes=("agentsteers:read",)))["WWW-Authenticate"]
-        self.assertIn("resource_metadata=", value)
+        self.assertIn('resource_metadata="https://mcp.agentsteers.com/.well-known/oauth-protected-resource/mcp"', value)
         self.assertIn('scope="agentsteers:read"', value)
 
 
