@@ -100,6 +100,32 @@ class FrappeNativeMCPRoundtripTests(unittest.TestCase):
         result = response["body"]["result"]
         return json.loads(result["content"][0]["text"])
 
+    def test_frappe_mcp_exposes_path_scoped_discovery_without_token(self):
+        # Protected resource metadata must be readable before login.
+        path = "/.well-known/oauth-protected-resource/mcp"
+        response = {}
+
+        def start(status, headers):
+            response["status"] = int(status.split()[0])
+            response["headers"] = dict(headers)
+
+        payload = b"".join(self.app({
+            "PATH_INFO": path, "REQUEST_METHOD": "GET",
+            "wsgi.url_scheme": "https",
+            "HTTP_HOST": "mcp.agentsteers.com",
+        }, start))
+        self.assertEqual(response["status"], 200)
+        document = json.loads(payload)
+        self.assertEqual(document["resource"], RESOURCE)
+        self.assertEqual(document["authorization_servers"], [ISSUER])
+        self.assertIn("agentsteers:read", document["scopes_supported"])
+        # No token introspection is performed just to discover metadata.
+        self.assertFalse(self.requests)
+
+        unauthorized = self.request("initialize", authorization="")
+        self.assertEqual(unauthorized["status"], 401)
+        self.assertIn(path, unauthorized["headers"]["WWW-Authenticate"])
+
     def test_native_token_full_mock_lifecycle(self):
         self.assertEqual(self.request("initialize")["status"], 200)
         available = self.request("tools/list")["body"]["result"]["tools"]

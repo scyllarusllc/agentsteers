@@ -1,5 +1,23 @@
 # AgentSteers
 
+## OAuth protected-resource discovery path (offline compatibility)
+
+The MCP resource is `https://mcp.agentsteers.com/mcp`. Its RFC 9728
+path-scoped discovery endpoint is
+`https://mcp.agentsteers.com/.well-known/oauth-protected-resource/mcp`.
+The OAuth mock resource server also retains the legacy origin-level path
+`/.well-known/oauth-protected-resource` for existing clients.
+Unauthenticated MCP requests receive a `WWW-Authenticate` challenge
+pointing at the **path-scoped** metadata. Metadata is public and contains
+no tokens or credentials; the MCP task endpoints remain authenticated and
+mock-only.
+
+These are offline code/test changes, **not** evidence that the endpoint
+is routed in Caddy or that live ChatGPT/Frappe login works. Verify the
+actual deployed Frappe authorization-server metadata, client registration,
+PKCE, and token introspection on an authorized private test system before
+making the protected MCP route publicly reachable.
+
 ## Frappe OAuth discovery preflight (offline)
 
 The Frappe-specific metadata preflight checks authorization-code flow, PKCE
