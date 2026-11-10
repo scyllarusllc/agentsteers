@@ -21,6 +21,7 @@ DEFAULTS = {
     "AGENTSTEERS_FRAPPE_ISSUER": "https://agentsteers.com",
     "AGENTSTEERS_FRAPPE_MCP_RESOURCE": RESOURCE,
     "AGENTSTEERS_FRAPPE_REPOS": "scyllarusllc/agentsteers",
+    "AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT": "strict",
 }
 
 
@@ -39,7 +40,8 @@ def read_private_config():
             if "=" not in line:
                 raise ValueError(f"Invalid private config line {num}")
             key, val = line.split("=", 1)
-            if key not in (*KEYS, "AGENTSTEERS_FRAPPE_ISSUER", "AGENTSTEERS_FRAPPE_MCP_RESOURCE"):
+            if key not in (*KEYS, "AGENTSTEERS_FRAPPE_ISSUER", "AGENTSTEERS_FRAPPE_MCP_RESOURCE",
+                            "AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT"):
                 raise ValueError(f"Unexpected config key on line {num}")
             if any(c in val for c in "\r\x00"):
                 raise ValueError(f"Invalid private config value on line {num}")
@@ -69,7 +71,8 @@ def setup():
     print("Configure Frappe OAuth MCP credentials locally. No values are sent to GitHub.")
     print("First register an OAuth Client in Frappe; use its real Client ID and Client Secret.")
     print("Press Enter to keep an existing value. Client Secret will not be displayed.")
-    for key in ("AGENTSTEERS_FRAPPE_ISSUER", *KEYS):
+    for key in ("AGENTSTEERS_FRAPPE_ISSUER", *KEYS,
+                "AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT"):
         default = previous.get(key, DEFAULTS.get(key, ""))
         label = key + (" [configured]" if key == "AGENTSTEERS_FRAPPE_CLIENT_SECRET" and default else
                        " [" + default + "]" if default and key != "AGENTSTEERS_FRAPPE_CLIENT_SECRET" else "")
@@ -93,7 +96,9 @@ def setup():
     try:
         fd = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "w", encoding="utf-8") as out:
-            for key in ("AGENTSTEERS_FRAPPE_ISSUER", *KEYS, "AGENTSTEERS_FRAPPE_MCP_RESOURCE"):
+            for key in ("AGENTSTEERS_FRAPPE_ISSUER", *KEYS,
+                        "AGENTSTEERS_FRAPPE_MCP_RESOURCE",
+                        "AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT"):
                 out.write(key + "=" + config[key] + "\n")
         os.replace(temp, CONFIG)
     finally:
