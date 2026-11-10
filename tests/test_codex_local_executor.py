@@ -46,11 +46,11 @@ class CodexLocalExecutorTests(unittest.TestCase):
             approval_consumed=True,
         )
         args.update(overrides)
+        real_stat = Path.stat
         with patch("agentsteers.codex_readiness.os.geteuid", return_value=12345), patch(
             "agentsteers.codex_readiness.Path.stat", autospec=True
         ) as stat_mock:
             # Preserve actual file attributes while substituting a non-root UID.
-            real_stat = Path.stat
             def safe_stat(path, *a, **k):
                 result = real_stat(path, *a, **k)
                 values = list(result)
