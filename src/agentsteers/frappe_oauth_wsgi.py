@@ -25,6 +25,7 @@ def build_application(env=None, *, opener=None):
     issuer = env.get("AGENTSTEERS_FRAPPE_ISSUER", "")
     client_id = env.get("AGENTSTEERS_FRAPPE_CLIENT_ID", "")
     client_secret = env.get("AGENTSTEERS_FRAPPE_CLIENT_SECRET", "")
+    claim_mode = env.get("AGENTSTEERS_FRAPPE_INTROSPECTION_FORMAT", "strict")
     subjects = frozenset(x.strip() for x in env.get(
         "AGENTSTEERS_FRAPPE_SUBJECTS", "").split(",") if x.strip())
     repos = frozenset(x.strip() for x in env.get(
@@ -35,7 +36,7 @@ def build_application(env=None, *, opener=None):
     try:
         verifier = FrappeTokenVerifier(
             issuer=issuer, client_id=client_id, client_secret=client_secret,
-            allowed_subjects=subjects, opener=opener)
+            allowed_subjects=subjects, opener=opener, claim_mode=claim_mode)
         return create_app(verifier=verifier, resource=RESOURCE,
                           authorization_server=issuer, repositories=repos)
     except ValueError:
