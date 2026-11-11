@@ -1,0 +1,38 @@
+name: Public OAuth discovery probe (manual)
+
+# Read-only, unauthenticated check of PUBLIC metadata. No secrets or login.
+# This does not verify Frappe token issuance, ChatGPT login or Codex execution.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: public-oauth-discovery-manual
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    name: Public metadata only
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run credential-free public OAuth probe
+        env:
+          AGENTSTEERS_FRAPPE_ISSUER: https://agentsteers.com
+        run: make mcp-auth-public-probe
+      - name: Clarify validation boundary
+        if: always()
+        run: |
+          echo 'This job checks only public OAuth discovery metadata.'
+          echo 'Passing does not establish ChatGPT login, valid token audience,'
+          echo 'MCP task execution, production deployment, or Codex readiness.'
