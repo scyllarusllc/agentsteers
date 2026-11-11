@@ -1,5 +1,30 @@
 # AgentSteers
 
+## Project status and next integration gates (2026-11-11)
+
+> **Status: implemented and offline-tested components; live ChatGPT-to-Codex workflow NOT verified.**
+> This section tracks repository evidence, not production readiness. Last reviewed 2026-11-11 (Pacific/Saipan).
+
+| Area | Evidence on `main` | Remaining gate |
+| --- | --- | --- |
+| Frappe website and deployment tooling | Frappe web app, development and deployment helpers exist | Validate the actual deployed site independently |
+| MCP mock task lifecycle | Mock `submit_task`, `get_task_status`, `get_task_result`, and `cancel_task` with actor/repository protections and offline tests | Run a live authenticated round-trip from a private test client |
+| Frappe-native OAuth compatibility | Offline metadata, token-introspection and mock round-trip coverage, including PRs [#33](https://github.com/scyllarusllc/agentsteers/pull/33) and [#34](https://github.com/scyllarusllc/agentsteers/pull/34) | Validate the installed Frappe provider, PKCE S256, token binding, scopes and user consent |
+| MCP OAuth discovery | Path-scoped RFC 9728 metadata fix [#35](https://github.com/scyllarusllc/agentsteers/pull/35) and read-only public probe [#36](https://github.com/scyllarusllc/agentsteers/pull/36) landed | Verify real DNS, HTTPS endpoints and reverse-proxy routing from an authorized host |
+| ChatGPT connector / Voice | Target architecture and test interfaces documented | No verified ChatGPT OAuth login, authenticated MCP tool call, or iPad Voice-to-worker round-trip |
+| Codex CLI worker | Guarded local execution primitive and readiness checks exist | **Not wired to public MCP or enabled for user tasks**; approvals, isolation, cancellation, audit and authorized deployment are required |
+
+### Recommended next steps (in order)
+
+1. **Public metadata, read-only:** From an authorized host with working DNS, run `AGENTSTEERS_FRAPPE_ISSUER=https://agentsteers.com make mcp-auth-public-probe` (adjust issuer to the actual deployed value). Record sanitized results; do not supply tokens or secrets to the probe.
+2. **Verify real Frappe OAuth in a private environment:** Check provider discovery, client registration and exact redirect URI, Authorization Code + PKCE S256, confidential introspection, expiry/revocation, explicit AgentSteers scopes, and MCP resource/audience binding. Do not assume a Frappe client ID alone proves resource-bound access tokens.
+3. **Authenticated mock MCP end-to-end:** Exercise `initialize`, `tools/list`, `submit_task`, `get_task_status`, `get_task_result`, `cancel_task` with real user identity; verify wrong-user, wrong-client, expired-token and unapproved-repository denial.
+4. **ChatGPT integration:** Only after the authentication and routing checks pass, connect the supported ChatGPT client and record an authenticated **mock-only** task round-trip. Verify Voice as a separate milestone.
+5. **Real Codex rollout requires a separate security and deployment review:** Trusted one-time approvals, least-privilege worker isolation, repository controls, cancellation, audit logging, resource limits and explicit authorization. Never enable shell/Codex from a public route on the strength of offline tests alone.
+
+**Evidence and tracking:** [Integration issue #37](https://github.com/scyllarusllc/agentsteers/issues/37), [mock test issue #11](https://github.com/scyllarusllc/agentsteers/issues/11), and merged PRs [#34](https://github.com/scyllarusllc/agentsteers/pull/34), [#35](https://github.com/scyllarusllc/agentsteers/pull/35), [#36](https://github.com/scyllarusllc/agentsteers/pull/36). GitHub CI passing for those PRs is **offline test evidence**, not proof of live Frappe, DNS, Caddy, ChatGPT connection or Codex execution.
+
+
 ## OAuth protected-resource discovery path (offline compatibility)
 
 The MCP resource is `https://mcp.agentsteers.com/mcp`. Its RFC 9728
