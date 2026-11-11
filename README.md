@@ -1,5 +1,24 @@
 # AgentSteers
 
+## PhD application shortlist — November 11, 2026, 22:00 (Pacific/Saipan)
+
+> Personal academic planning notes, separate from AgentSteers software status. The time in this heading is the user's requested reference time, **not** a claim that every opportunity was independently reverified at that exact time. All opportunities, eligibility and funding must be confirmed with the universities before applying.
+
+**Goal:** Seek a funded PhD starting in 2027 in the **United Kingdom, Australia or Spain**. Research interests are deliberately broad: AI and machine learning, software engineering, information systems, digital transformation, technology management, cybersecurity, and educational technology (including computer vision and controllable image/video generation).
+
+**Background and constraints:** MBA, associate degree, no bachelor's degree, approximately 16 years of software development, university CIO experience, applied AI/ERPNext work; no published academic papers reported. Maximum personal contribution **US$10,000 per year including tuition, accommodation, food, insurance and other living expenses**. Prioritize full tuition coverage **plus a living stipend or salaried doctoral contract**.
+
+| Country / institution | Lead or program to investigate | Eligibility and funding questions | Priority |
+| --- | --- | --- | --- |
+| **UK — De Montfort University (DMU)** | Potential supervisors **Dr Emrah Bilgiç** (business analytics, digitalization, AI/business) and **Dr Laleh Kasraian** (information systems, digital transformation/business intelligence); [DMU supervisor directory](https://www.dmu.ac.uk/doctoral-college/doctoral-college-supervisors.aspx) | Earlier PGR admissions correspondence reportedly confirmed the MBA meets the **academic criteria for PhD consideration**, **not** faculty approval or admission. Confirm current supervision, project fit and **international-applicant full funding with stipend**. Do not assume the university's general funded calls match this research direction. | High |
+| **Australia — University of Wollongong (UOW)** | **Professor Hoa Khanh Dam**, AI and software engineering; [academic homepage](https://documents.uow.edu.au/~hoa/); [research scholarships](https://www.uow.edu.au/research/graduate-research/scholarships/) | A previously identified recruitment lead indicated interest in 2026/2027 HDR students; confirm it is still open. Earlier university correspondence suggested an MPhil/research route may be considered, **subject to formal assessment**. Confirm entry without a bachelor's degree and whether an award covers **both tuition and living expenses**. | High |
+| **Spain — University of Alicante / other funded doctoral contracts** | [EURAXESS lead](https://euraxess.ec.europa.eu/jobs/478460) in computing/AI, and broader Spanish salaried PhD positions | The previously found Alicante post reportedly required a relevant bachelor's plus master's degree; **not currently a strong eligibility match**. Check deadline/status, doctoral admission equivalence, language and salary/tax/living-cost fit before applying. | Exploratory |
+
+**Next actions:** (1) Contact DMU and UOW supervisors with a concise CV, project portfolio, research interests, and an honest explanation of the nontraditional education route; (2) ask admissions to confirm degree equivalency, PhD/MPhil pathways and scholarship eligibility in writing; (3) shortlist *specific currently open* fully funded/salaried calls; (4) compare stipend after taxes, tuition gap, visa/insurance and local cost of living against the US$10,000/year all-in personal cap. **No application, supervisor availability, admission decision or full scholarship is confirmed by this note.**
+
+---
+
+
 ## Project status and next integration gates (2026-11-11)
 
 > **Status: implemented and offline-tested components; live ChatGPT-to-Codex workflow NOT verified.**
