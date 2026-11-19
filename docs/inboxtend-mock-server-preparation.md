@@ -25,6 +25,18 @@ AGENTSTEERS_MCP_MOCK_TOKEN=REPLACE_WITH_PRIVATE_RANDOM_TOKEN_AT_LEAST_32_CHARACT
 
 The corresponding private Inbox Tend configuration uses `INBOX_TEND_AGENTSTEERS_BRIDGE_ENABLED=1`, the **same** token, the exact `https://YOUR_APPROVED_MCP_HOSTNAME/mcp` endpoint, and the same allowlisted repository. Never expose the token to the browser, README, issue, analytics, or access logs. Rotate both sides together; an unauthorized or stale token must fail closed.
 
+## Read-only operator preflight (not run against any server here)
+
+A new source-only utility is available at [`scripts/check_mock_mcp_host.py`](../scripts/check_mock_mcp_host.py). On the **authorized target host**, an operator can run:
+
+```sh
+python3 scripts/check_mock_mcp_host.py
+```
+
+It prints a **local-only JSON report** for the current Unix account, relevant repository files, optional venv Gunicorn, Caddy binary presence, mock environment variable *syntax* (never their secret values), private SQLite file/directory permissions, and an informational TCP listener lookup for port 8766. It **does not connect to a server**, alter any file, start a process, invoke a worker, run a test suite, or approve deployment.
+
+The script reads environment variables from its **current process only**; systemd EnvironmentFile values are not automatically available to a manual shell. Consequently missing variables in a shell can be informational even if a future service unit is configured. A `ready: true` response would still **not prove** correct TLS, login, network firewall, task ownership or service availability. Review the report manually; never paste or commit private configuration into the repository.
+
 ## Server preparation checklist (not performed)
 
 1. **Host and identity:** Confirm ownership, actual server path, dedicated non-root Unix user and group, host firewall, DNS, proxy implementation and Caddy ownership. Do not infer access from the existence of a GitHub repository.
