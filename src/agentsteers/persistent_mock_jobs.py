@@ -105,6 +105,24 @@ class PersistentMockJobs:
                 raise
         return {"ok": True, "task_id": job_id, "status": "queued_mock"}
 
+    def summary(self, principal: Principal):
+        """Count only mock tasks visible to this verified actor."""
+        if not principal.repositories:
+            return {"ok": True, "mode": "mock_only",
+                    "total": 0, "queued_mock": 0, "cancelled": 0}
+        repos = sorted(principal.repositories)
+        placeholders = ",".join("?" for _ in repos)
+        with self._db() as db:
+            rows = db.execute(
+                "SELECT state, COUNT(*) AS count FROM mock_jobs "
+                "WHERE owner=? AND repository IN (" + placeholders + ") "
+                "GROUP BY state", (principal.subject, *repos)).fetchall()
+        counts = {row["state"]: row["count"] for row in rows}
+        return {"ok": True, "mode": "mock_only",
+                "total": sum(counts.values()),
+                "queued_mock": counts.get("queued_mock", 0),
+                "cancelled": counts.get("cancelled", 0)}
+
     def status(self, principal: Principal, job_id: str):
         with self._db() as db:
             row = self._owned(db, principal, job_id)
