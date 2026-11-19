@@ -11,6 +11,7 @@ import os
 from urllib.parse import urlsplit
 
 from agentsteers.actor_jobs import ActorScopedMockJobs, Principal
+from agentsteers.persistent_mock_jobs import PersistentMockJobs
 
 PROTOCOL = "2025-06-18"
 MAX_BODY = 16384
@@ -133,14 +134,29 @@ def application(environ, start_response):
         subject="mock-token-owner", repositories=repositories,
         can_submit=True, can_cancel=True,
     )
-    if name == "submit_task":
-        outcome = JOBS.submit(principal, arguments["repository"], arguments["instruction"])
-    elif name == "get_task_status":
-        outcome = JOBS.status(principal, arguments["task_id"])
-    elif name == "get_task_result":
-        outcome = JOBS.result(principal, arguments["task_id"])
-    else:
-        outcome = JOBS.cancel(principal, arguments["task_id"])
+    # The persistent mock store is opt-in, private, and still never executes code.
+    # If explicitly configured but invalid, fail closed; never silently fall back
+    # to memory and lose track of an accepted task.
+    store = JOBS
+    persistent_path = os.environ.get("AGENTSTEERS_MCP_MOCK_DB", "")
+    if persistent_path:
+        try:
+            store = PersistentMockJobs(persistent_path, max_jobs=100)
+        except (ValueError, OSError) as exc:
+            return _response(start_response, "503 Service Unavailable",
+                             b'{"error":"mock_store_unavailable"}')
+    try:
+        if name == "submit_task":
+            outcome = store.submit(principal, arguments["repository"], arguments["instruction"])
+        elif name == "get_task_status":
+            outcome = store.status(principal, arguments["task_id"])
+        elif name == "get_task_result":
+            outcome = store.result(principal, arguments["task_id"])
+        else:
+            outcome = store.cancel(principal, arguments["task_id"])
+    except (ValueError, OSError):
+        return _response(start_response, "503 Service Unavailable",
+                         b'{"error":"mock_store_unavailable"}')
     return _json(start_response, id_, result={
         "content": [{"type": "text", "text": json.dumps(outcome)}],
         "isError": not outcome.get("ok", False),
