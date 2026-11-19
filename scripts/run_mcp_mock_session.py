@@ -40,15 +40,6 @@ def check_venv():
         subprocess.run([str(PYTHON), "-m", "pip", "install", "gunicorn>=21,<24"], check=True)
 
 
-def test_suite():
-    for filename in ("test_mock_http_mcp.py", "test_remote_mcp_guard.py",
-                     "test_mcp_mock_caddy.py", "test_mcp_json_session.py", "test_stop_mock_mcp.py"):
-        env = dict(os.environ, PYTHONPATH=str(ROOT / "src"))
-        subprocess.run([str(PYTHON), "-m", "unittest", "discover",
-                        "-s", "tests", "-p", filename, "-v"],
-                       cwd=ROOT, env=env, check=True)
-
-
 def token_from_private_file():
     SECRET_FILE.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     SECRET_FILE.parent.chmod(0o700)
@@ -163,7 +154,7 @@ def main():
     print(f"MCP diagnostic - project directory: {ROOT}", flush=True)
     print(f"MCP diagnostic - Linux user (whoami): {pwd.getpwuid(os.geteuid()).pw_name}", flush=True)
     check_venv()
-    test_suite()
+    # The removed test suite is not a startup prerequisite. Keep safety checks below.
     token = token_from_private_file()
     if not CADDY.is_file():
         raise RuntimeError(f"Missing active Caddy configuration: {CADDY}")
