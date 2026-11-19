@@ -64,6 +64,18 @@ class ActorScopedMockJobs:
             return None
         return job
 
+    def summary(self, principal: Principal) -> dict:
+        """Read-only summary of this actor's allowed mock tasks."""
+        with self._lock:
+            owned = [job for job in self._jobs.values()
+                     if job["owner"] == principal.subject
+                     and job["repository"] in principal.repositories]
+            return {
+                "ok": True, "mode": "mock_only", "total": len(owned),
+                "queued_mock": sum(job["status"] == "queued_mock" for job in owned),
+                "cancelled": sum(job["status"] == "cancelled" for job in owned),
+            }
+
     def status(self, principal: Principal, job_id: str) -> dict:
         with self._lock:
             job = self._owned(principal, job_id)
