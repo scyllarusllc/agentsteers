@@ -1,0 +1,33 @@
+# EXAMPLE ONLY — not installed or enabled.
+# Edit the service user, checkout location and port after operator review.
+# For MOCK-ONLY MCP; never runs Codex, shell, or production tasks.
+[Unit]
+Description=AgentSteers mock-only MCP (no execution)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=agentsteers
+Group=agentsteers
+WorkingDirectory=/srv/agentsteers/current
+Environment=PYTHONPATH=/srv/agentsteers/current/src
+EnvironmentFile=/etc/agentsteers/mock-mcp.env
+# Keep the mock database in the service-owned private StateDirectory.
+StateDirectory=agentsteers-mock
+StateDirectoryMode=0700
+UMask=0077
+ExecStart=/srv/agentsteers/current/.venv/bin/gunicorn --bind 127.0.0.1:8766 --workers 1 --access-logfile - agentsteers.mock_http_mcp:application
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/lib/agentsteers-mock
+RestrictSUIDSGID=yes
+LockPersonality=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+
+[Install]
+WantedBy=multi-user.target
