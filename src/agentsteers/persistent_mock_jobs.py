@@ -47,11 +47,23 @@ class PersistentMockJobs:
         # Existing files must be owned/protected by the deployment operator.
         if self.path.exists() and (self.path.is_symlink() or self.path.stat().st_mode & 0o077):
             raise ValueError("Mock job file permissions are too broad")
+        # Create the file with private permissions before opening SQLite.
+        # Do not change permissions on an existing file that might be unsafe.
+        if not self.path.exists():
+            flags = os.O_CREAT | os.O_EXCL | os.O_WRONLY
+            if hasattr(os, "O_NOFOLLOW"):
+                flags |= os.O_NOFOLLOW
+            try:
+                fd = os.open(self.path, flags, 0o600)
+                os.close(fd)
+            except FileExistsError:
+                pass  # A parallel worker may have created the same file.
+        if self.path.is_symlink() or (self.path.stat().st_mode & 0o077):
+            raise ValueError("Mock job file permissions are too broad")
         connection = sqlite3.connect(str(self.path), timeout=5, isolation_level=None)
-        self.path.chmod(0o600)
-        connection.row_factory = sqlite3.Row
-        connection.execute("PRAGMA busy_timeout=5000")
         try:
+            connection.row_factory = sqlite3.Row
+            connection.execute("PRAGMA busy_timeout=5000")
             yield connection
         finally:
             connection.close()
