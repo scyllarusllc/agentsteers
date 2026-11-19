@@ -7,6 +7,7 @@ same store. Caller identity must come from trusted MCP authentication.
 from __future__ import annotations
 
 import json
+from contextlib import contextmanager
 import os
 from pathlib import Path
 import re
@@ -40,6 +41,7 @@ class PersistentMockJobs:
                 created_at TEXT NOT NULL
             )""")
 
+    @contextmanager
     def _db(self):
         # This is not a mailbox or user file store. Keep mock task data private.
         # Existing files must be owned/protected by the deployment operator.
@@ -49,7 +51,10 @@ class PersistentMockJobs:
         self.path.chmod(0o600)
         connection.row_factory = sqlite3.Row
         connection.execute("PRAGMA busy_timeout=5000")
-        return connection
+        try:
+            yield connection
+        finally:
+            connection.close()
 
     @staticmethod
     def _owned(db, principal: Principal, job_id: str):
