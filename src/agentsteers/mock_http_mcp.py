@@ -8,6 +8,7 @@ from __future__ import annotations
 import hmac
 import json
 import os
+import sqlite3
 from urllib.parse import urlsplit
 
 from agentsteers.actor_jobs import ActorScopedMockJobs, Principal
@@ -142,7 +143,7 @@ def application(environ, start_response):
     if persistent_path:
         try:
             store = PersistentMockJobs(persistent_path, max_jobs=100)
-        except (ValueError, OSError) as exc:
+        except (ValueError, OSError, sqlite3.Error):
             return _response(start_response, "503 Service Unavailable",
                              b'{"error":"mock_store_unavailable"}')
     try:
@@ -154,7 +155,7 @@ def application(environ, start_response):
             outcome = store.result(principal, arguments["task_id"])
         else:
             outcome = store.cancel(principal, arguments["task_id"])
-    except (ValueError, OSError):
+    except (ValueError, OSError, sqlite3.Error):
         return _response(start_response, "503 Service Unavailable",
                          b'{"error":"mock_store_unavailable"}')
     return _json(start_response, id_, result={
