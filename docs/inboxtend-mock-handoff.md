@@ -17,6 +17,8 @@ The existing `src/agentsteers/mock_http_mcp.py` implements JSON-RPC at `POST /mc
 
 By default this is a **bounded in-memory simulation**; a restarted service or a separate worker process does not retain/see existing job IDs unless the separately configured private SQLite mock store is in use. `queued_mock` is not `done` or `succeeded`. Do not invent a completion transition.
 
+**Server preparation:** [Non-root mock MCP service runbook](inboxtend-mock-server-preparation.md) and [uninstalled systemd example](../deploy/agentsteers-mock-mcp.service.example). These do not indicate deployment or live service availability.
+
 ## Deployment boundary
 
 A server operator would separately need to enable the AgentSteers mock WSGI endpoint and configure these **private** environment variables (placeholders, never actual credentials in Git):
