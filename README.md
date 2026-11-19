@@ -1,5 +1,19 @@
 # AgentSteers
 
+## Technical interests / 技术兴趣
+
+**Primary focus / 当前主方向:** **Reliable and Controllable AI Agents for Real-World Workflow Automation（面向真实工作流程的可靠、可控 AI 智能代理）**.
+
+The owner is interested in **both planning/reasoning and practical execution/verification**. A bilingual analysis includes the interest-ranking chart and related GitHub projects. The chart is a subjective personal-interest reflection, **not** a measurement of technical ability or GitHub contributions.
+
+主要兴趣包括 AI Agent 的规划推理、实际工具执行与结果验证。中英文图表和项目依据请参见：
+
+**[Technical Interests — Full Bilingual Chart / 技术兴趣排名完整中英文图表](docs/technical-interests.md)**
+
+> This is a personal technical focus statement. It does not imply that AgentSteers' end-to-end ChatGPT/Voice-to-Codex workflow has been deployed or verified.
+
+---
+
 ## PhD application shortlist — November 11, 2026, 22:00 (Pacific/Saipan)
 
 > Personal academic planning notes, separate from AgentSteers software status. The time in this heading is the user's requested reference time, **not** a claim that every opportunity was independently reverified at that exact time. All opportunities, eligibility and funding must be confirmed with the universities before applying.
