@@ -26,6 +26,11 @@ METHODS = {
             "required": ["repository", "instruction"], "additionalProperties": False,
         },
     },
+    "get_queue_summary": {
+        "description": "Read actor-scoped mock queue counts; does not execute tasks.",
+        "inputSchema": {"type": "object", "properties": {},
+                        "required": [], "additionalProperties": False},
+    },
     "get_task_status": {"description": "Read a mock task status.", "inputSchema": {
         "type": "object", "properties": {"task_id": {"type": "string"}},
         "required": ["task_id"], "additionalProperties": False}},
@@ -149,6 +154,8 @@ def application(environ, start_response):
     try:
         if name == "submit_task":
             outcome = store.submit(principal, arguments["repository"], arguments["instruction"])
+        elif name == "get_queue_summary":
+            outcome = store.summary(principal)
         elif name == "get_task_status":
             outcome = store.status(principal, arguments["task_id"])
         elif name == "get_task_result":
